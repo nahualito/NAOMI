@@ -1,0 +1,12 @@
+CodeWarrior registries created:
+ 
+In HKEY_LOCAL_MACHINE:
+\SOFTWARE\Metrowerks\CodeWarrior\Product Versions\Pro4
+   Version = 1
+   Installer = 980831.1447
+   Path = c:\katana\utl\dev\CodeWarrior
+\SOFTWARE\Metrowerks\CodeWarrior\3.2\
+   Path = c:\katana\utl\dev\CodeWarrior
+\SOFTWARE\Metrowerks\CodeWarrior\3.2\Helpers
+   BDWM = c:\katana\utl\dev\CodeWarrior\bin\MWDebug.exe
+   RNJV = c:\katana\utl\dev\CodeWarrior\(Helper Apps)\runjava.exe

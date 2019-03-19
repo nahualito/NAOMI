@@ -1,0 +1,2733 @@
+/*  Metrowerks Standard Library  Version 4.0  1998 August 10  */
+
+/*  $Date:: 6/18/98 12:28 PM                                 $ 
+ *  $Revision:: 12                                           $ 
+ *  $NoKeywords: $ 
+ *
+ *		Portions Copyright © 1995-1998 Metrowerks, Inc.
+ *		All rights reserved.
+ */
+
+/**
+ **  valarray      // hh 971226 Changed filename from valarray.h to valarray
+ **
+ **  Lib++  : The Modena C++ Standard Library,
+ **           Version 2.4, October 1997
+ **
+ **  Copyright (c) 1995-1997 Modena Software Inc.
+ **/
+
+#ifndef _VALARRAY         // hh 971226 Made include guards standard
+#define _VALARRAY
+
+#include <mcompile.h>
+
+#include <algobase.h>  // hh 971220 fixed MOD_INCLUDE
+#include <algorithm>   // hh 971220 fixed MOD_INCLUDE
+#include <extfunc.h>   // hh 971220 fixed MOD_INCLUDE
+#include <numeric>     // hh 971220 fixed MOD_INCLUDE
+
+#ifndef RC_INVOKED // hh 971230
+
+#pragma options align=native
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import on
+#endif
+
+#ifdef MSIPL_USING_NAMESPACE
+	namespace std {
+#endif
+
+// Section 26.2 -- Numeric Arrays
+
+template <class T> class valarray;       // an array of type T
+template <class T> class mask_array;     // a masked array
+template <class T> class slice_array;    // a BLAS-like slice out of array
+template <class T> class gslice_array;   // a generalized slice out of array
+template <class T> class indirect_array; // an indirect array
+class slice;
+class gslice;
+
+// hh 971229 added val_array prototypes
+#ifndef MSIPL_MEMBER_TEMPLATE
+
+	template <class T, class Function>
+	inline valarray<T>
+	val_array (const valarray<T>& v, Function func);
+
+	template <class T, class Function>
+	inline valarray<T>
+	val_array (const valarray<T>& v1, const valarray<T>& v2, Function func);
+
+	template <class T, class Function>
+	inline valarray<T>
+	val_array (const valarray<T>& v, const T& t, Function func);
+
+	template <class T, class Function>
+	inline valarray<T>
+	val_array (const T& t, const valarray<T>& v, Function func);
+
+	template <class T, class Function>
+	inline valarray<bool>
+	val_array_bool (const valarray<T>& v, Function func);
+
+	template <class T, class Function>
+	inline valarray<bool>
+	val_array_bool (const valarray<T>& v1, const valarray<T>& v2,
+	                Function func);
+
+	template <class T, class Function>
+	inline valarray<bool>
+	val_array_bool (const valarray<T>& v, const T& t, Function func);
+
+	template <class T, class Function>
+	inline valarray<bool>
+	val_array_bool (const T& t, const valarray<T>& v, Function func);
+
+#endif
+
+// hh 971229 gslice_array moved here from below
+template <class T> class gslice_array {
+
+public :
+    typedef T  value_type;
+
+    void operator= (const valarray<T>&) const;
+    void operator*= (const valarray<T>&) const;
+    void operator/= (const valarray<T>&) const;
+    void operator%= (const valarray<T>&) const;
+    void operator+= (const valarray<T>&) const;
+    void operator-= (const valarray<T>&) const;
+    void operator^= (const valarray<T>&) const;
+    void operator&= (const valarray<T>&) const;
+    void operator|= (const valarray<T>&) const;
+    void operator<<= (const valarray<T>&) const;
+    void operator>>= (const valarray<T>&) const;
+
+    void operator= (const T&);
+
+private:
+    gslice_array ();
+    gslice_array (const gslice_array&);
+    gslice_array& operator=(const gslice&);
+    gslice_array (const valarray<T>&, const gslice&);
+    size_t   _len;
+    T**      _ptr_ptr;
+
+   class store_pointer {
+      size_t*  _ptr;
+   public:
+      store_pointer (size_t* ptr) : _ptr (ptr) {}
+      ~store_pointer () { if (_ptr) delete[] _ptr; }
+
+      friend class gslice_array<T>;
+   };
+
+    friend class valarray<T>;
+
+public:
+    ~gslice_array () { if (_len) delete[] _ptr_ptr; }
+};
+
+// hh 971229 indirect_array moved here from below
+template <class T> class indirect_array {
+
+public :
+    typedef T  value_type;
+    void operator= (const valarray<T>&) const;
+    void operator*= (const valarray<T>&) const;
+    void operator/= (const valarray<T>&) const;
+    void operator%= (const valarray<T>&) const;
+    void operator+= (const valarray<T>&) const;
+    void operator-= (const valarray<T>&) const;
+    void operator^= (const valarray<T>&) const;
+    void operator&= (const valarray<T>&) const;
+    void operator|= (const valarray<T>&) const;
+    void operator<<= (const valarray<T>&) const;
+    void operator>>= (const valarray<T>&) const;
+
+    void operator= (const T&);
+
+private:
+    indirect_array (const indirect_array&);
+    indirect_array (const valarray<T>&, const valarray<size_t>&);
+    size_t   _len;
+    T**      _ptr_ptr;
+
+    friend class valarray<T>;
+public:
+    ~indirect_array () { if (_len) delete[] _ptr_ptr; }
+};
+
+// hh 971229 mask_array moved here from below
+
+template <class T> class mask_array {
+
+public :
+    typedef T  value_type;
+    void operator= (const valarray<T>&) const;
+    void operator*= (const valarray<T>&) const;
+    void operator/= (const valarray<T>&) const;
+    void operator%= (const valarray<T>&) const;
+    void operator+= (const valarray<T>&) const;
+    void operator-= (const valarray<T>&) const;
+    void operator^= (const valarray<T>&) const;
+    void operator&= (const valarray<T>&) const;
+    void operator|= (const valarray<T>&) const;
+    void operator<<= (const valarray<T>&) const;
+    void operator>>= (const valarray<T>&) const;
+
+    void operator= (const T&);
+
+private:
+    mask_array ();
+    mask_array (const mask_array&);
+    mask_array& operator= (const mask_array&);
+    mask_array (const valarray<T>&, const valarray<bool>&);
+    size_t   _len;
+    T**      _ptr_ptr;
+  
+    friend class valarray<T>;
+
+public:
+    ~mask_array () { if (_len) delete[] _ptr_ptr; }
+};
+
+template <class T> 
+class valarray{
+
+public:
+    typedef T  value_type;
+
+    valarray () : _len (0), _ptr (0) {}
+
+    explicit valarray (size_t n) : _len (n), _ptr (_len ? new T[_len] : 0) 
+    { fill_n (_ptr, _len, T()); }
+
+    valarray (const T& t, size_t n) : _len (n), _ptr (_len ? new T[_len] : 0) 
+    { fill_n (_ptr, _len, t); }
+
+    valarray (const T* t, size_t n) : _len (n), _ptr (_len ? new T[_len] : 0) 
+    { MSIPLSTD::copy (t, t+n, _ptr); }
+
+    valarray (const valarray& v) : _len (v.length ()), _ptr (_len ? new T[_len] : 0) 
+    { MSIPLSTD::copy (v._ptr, v._ptr+_len, _ptr); }
+
+    valarray (const mask_array<T>& m)
+    : _len (m._len), _ptr (_len ? new T[_len] : 0) 
+    { __msipl_copy_iter (m._ptr_ptr, m._ptr_ptr+_len, _ptr); }
+
+    valarray (const slice_array<T>& s)
+    : _len (s._len), _ptr (_len ? new T[_len] : 0) 
+    { __msipl_copy_iter (s._ptr_ptr, s._ptr_ptr+_len, _ptr); }
+
+    valarray (const gslice_array<T>& g)
+    : _len (g._len), _ptr (_len ? new T[_len] : 0)
+    { __msipl_copy_iter (g._ptr_ptr, g._ptr_ptr+_len, _ptr); }
+
+    valarray (const indirect_array<T>& i)
+    : _len (i._len), _ptr (_len ? new T[_len] : 0)
+    { __msipl_copy_iter (i._ptr_ptr, i._ptr_ptr+_len, _ptr); }
+
+    ~valarray () {  delete_alloc (); }
+
+    operator T* () { READ_LOCK(va_mutex); return _ptr; }
+
+    operator const T* () const { READ_LOCK(va_mutex); return _ptr; }
+
+    size_t length () const { READ_LOCK(va_mutex); return _len; }
+    size_t size () const { READ_LOCK(va_mutex); return _len; }
+
+    T    operator[] (size_t pos) const 
+      { READ_LOCK(va_mutex); return *(_ptr+pos); }
+
+    T&   operator[] (size_t pos) 
+      { READ_LOCK(va_mutex); return *(_ptr+pos); }
+
+    valarray   operator[] (slice  s) const
+    {
+        READ_LOCK(va_mutex);
+        slice_array<T>      sarray (*this, s);
+        return valarray<T> (sarray);
+    }
+
+    valarray   operator[] (const gslice& g) const
+    {
+        READ_LOCK(va_mutex);
+        gslice_array<T>     garray (*this,g);
+        return valarray<T> (garray);
+    }
+
+    valarray   operator[] (const valarray<bool>& vb) const
+    {
+        READ_LOCK(va_mutex);
+        mask_array<T>       marray (*this, vb);
+        return valarray<T> (marray);
+    }
+
+    valarray   operator[] (const valarray<size_t>&  vi) const
+    {
+        READ_LOCK(va_mutex);
+        indirect_array<T>   iarray (*this, vi);
+        return valarray<T> (iarray);
+    }
+
+    slice_array<T>     operator[] (slice  s)
+    {
+        READ_LOCK(va_mutex);
+        return slice_array<T> (*this, s);
+    }
+
+    gslice_array<T>    operator[] (const gslice& g)
+    {
+        READ_LOCK(va_mutex);
+        return gslice_array<T> (*this, g);
+    }
+
+    mask_array<T>      operator[] (const valarray<bool>&  vb)
+    {
+        READ_LOCK(va_mutex);
+        return mask_array<T> (*this, vb);
+    }
+
+    indirect_array<T>  operator[] (const valarray<size_t>&  vi)
+    {
+        READ_LOCK(va_mutex);
+        return indirect_array<T> (*this, vi);
+    } 
+
+    valarray& operator= (const valarray&);
+    valarray& operator= (const T&);
+    valarray& operator= (const mask_array<T>&);
+    valarray& operator= (const slice_array<T>&);
+    valarray& operator= (const gslice_array<T>&);
+    valarray& operator= (const indirect_array<T>&);
+
+    valarray operator+ () const { READ_LOCK(va_mutex); return *this; }
+
+    valarray operator- () const;
+    valarray operator~ () const;
+    valarray operator! () const;
+    valarray& operator*= (const T& t);
+    valarray& operator/= (const T& t);
+    valarray& operator%= (const T& t);
+    valarray& operator+= (const T& t);
+    valarray& operator-= (const T& t);
+    valarray& operator^= (const T& t);
+    valarray& operator&= (const T& t);
+    valarray& operator|= (const T& t);
+    valarray& operator<<= (const T& t);
+    valarray& operator>>= (const T& t);
+
+    valarray& operator*= (const valarray& v);
+    valarray& operator/= (const valarray& v);
+    valarray& operator%= (const valarray& v);
+    valarray& operator+= (const valarray& v);
+    valarray& operator-= (const valarray& v);
+    valarray& operator^= (const valarray& v);
+    valarray& operator&= (const valarray& v);
+    valarray& operator|= (const valarray& v);
+    valarray& operator<<= (const valarray& v);
+    valarray& operator>>= (const valarray& v);
+
+    T mult (size_t) const;
+    T min () const;
+    T max () const;
+    valarray shift (int) const;
+    valarray cshift (int) const;
+    valarray apply (T func (T)) const;
+    valarray apply (T func (const T&)) const;
+    T sum () const;
+
+    void  fill (const T& t) 
+      { WRITE_LOCK(va_mutex); fill_n (_ptr, length (), t); }  // hh 971229 removed :: from fill_n
+
+    void  free () { WRITE_LOCK(va_mutex); delete_alloc (); }
+
+    void  resize (size_t sz, T c = T ());
+
+private :
+    size_t   _len;
+    T*       _ptr;
+    DEC_OBJ_LOCK(va_mutex)
+
+public:
+#ifdef MSIPL_MEMBER_TEMPLATE
+   template <class X, class Function>
+   valarray (const valarray<X>& v, Function func)
+   : _len (v.length ()), _ptr (_len ? new T[_len] : 0)
+   {
+    __msipl_copy_value (v.operator const X* (),
+                          v.operator const X* ()+_len, _ptr, func);
+   }
+
+   template <class X, class Function>
+   valarray (const valarray<X>& v1, const valarray<X>& v2, Function func)
+   : _len (MSIPLSTD::min (v1.length (), v2.length ())), _ptr (_len ? new T[_len] : 0)  // hh 971226 added MSIPLSTD
+   {
+    __msipl_copy_array (v1.operator const X* (),
+                          v1.operator const X* ()+_len,
+                          v2.operator const X* (), _ptr, func);
+   }
+
+   template <class X, class Function>
+   valarray (const valarray<X>& v, const X& t, Function func)
+   : _len (v.length ()), _ptr (_len ? new T[_len] : 0)
+   {
+    __msipl_copy_value (v.operator const X* (),
+                          v.operator const X* ()+_len, t, _ptr, func);
+   }
+
+   template <class X, class Function>
+   valarray (const X& t, const valarray<X>& v, Function func)
+   : _len (v.length ()), _ptr (_len ? new T[_len] : 0)
+   {
+    __msipl_copy_value (t, v.operator const X* (),
+                          v.operator const X* ()+_len, _ptr, func);
+   }
+#endif
+
+   void delete_alloc () 
+   {
+      if (_len) delete[] _ptr;
+      _ptr = 0;
+      _len = 0;
+   }
+
+   valarray (size_t len, T* ptr)
+   : _len (len), _ptr (ptr) {}
+   
+     // hh 971229 All of the friend declarations used to look like this:
+//   template <class TT>
+//   friend valarray<TT> operator* (const valarray<TT>&, const valarray<TT>&);
+//   friend valarray operator* (const valarray&, const valarray&);
+   friend valarray operator* <T>(const valarray& v1, const valarray& v2);
+   friend valarray operator* <T>(const valarray&, const T&);
+   friend valarray operator* <T>(const T&, const valarray&);
+
+   friend valarray operator/ <T>(const valarray&, const valarray&);
+   friend valarray operator/ <T>(const valarray&, const T&);
+   friend valarray operator/ <T>(const T&, const valarray&);
+
+   friend valarray operator% <T>(const valarray&, const valarray&);
+   friend valarray operator% <T>(const valarray&, const T&);
+   friend valarray operator% <T>(const T&, const valarray&);
+
+   friend valarray operator+ <T>(const valarray&, const valarray&);
+   friend valarray operator+ <T>(const valarray&, const T&);
+   friend valarray operator+ <T>(const T&, const valarray&);
+
+   friend valarray operator- <T>(const valarray&, const valarray&);
+   friend valarray operator- <T>(const valarray&, const T&);
+   friend valarray operator- <T>(const T&, const valarray&);
+
+   friend valarray operator^ <T>(const valarray&, const valarray&);
+   friend valarray operator^ <T>(const valarray&, const T&);
+   friend valarray operator^ <T>(const T&, const valarray&);
+
+   friend valarray operator& <T>(const valarray&, const valarray&);
+   friend valarray operator& <T>(const valarray&, const T&);
+   friend valarray operator& <T>(const T&, const valarray&);
+
+   friend valarray operator| <T>(const valarray&, const valarray&);
+   friend valarray operator| <T>(const valarray&, const T&);
+   friend valarray operator| <T>(const T&, const valarray&);
+
+   friend valarray operator<< <T>(const valarray&, const valarray&);
+   friend valarray operator<< <T>(const valarray&, const T&);
+   friend valarray operator<< <T>(const T&, const valarray&);
+
+   friend valarray operator>> <T>(const valarray&, const valarray&);
+   friend valarray operator>> <T>(const valarray&, const T&);
+   friend valarray operator>> <T>(const T&, const valarray&);
+
+   friend valarray<bool> operator&& <T>(const valarray&, const valarray&);
+   friend valarray<bool> operator&& <T>(const valarray&, const T&);
+   friend valarray<bool> operator&& <T>(const T&, const valarray&);
+
+   friend valarray<bool> operator|| <T>(const valarray&, const valarray&);
+   friend valarray<bool> operator|| <T>(const valarray&, const T&);
+   friend valarray<bool> operator|| <T>(const T&, const valarray&);
+
+   friend valarray<bool> operator== <T>(const valarray&, const valarray&);
+   friend valarray<bool> operator== <T>(const valarray&, const T&);
+   friend valarray<bool> operator== <T>(const T&, const valarray&);
+
+   friend valarray<bool> operator!= <T>(const valarray&, const valarray&);
+   friend valarray<bool> operator!= <T>(const valarray&, const T&);
+   friend valarray<bool> operator!= <T>(const T&, const valarray&);
+
+   friend valarray<bool> operator< <T>(const valarray&, const valarray&);
+   friend valarray<bool> operator< <T>(const valarray&, const T&);
+   friend valarray<bool> operator< <T>(const T&, const valarray&);
+
+   friend valarray<bool> operator> <T>(const valarray&, const valarray&);
+   friend valarray<bool> operator> <T>(const valarray&, const T&);
+   friend valarray<bool> operator> <T>(const T&, const valarray&);
+
+   friend valarray<bool> operator<= <T>(const valarray&, const valarray&);
+   friend valarray<bool> operator<= <T>(const valarray&, const T&);
+   friend valarray<bool> operator<= <T>(const T&, const valarray&);
+
+   friend valarray<bool> operator>= <T>(const valarray&, const valarray&);
+   friend valarray<bool> operator>= <T>(const valarray&, const T&);
+   friend valarray<bool> operator>= <T>(const T&, const valarray&);
+
+   friend valarray abs <T>(const valarray&);
+	#ifndef _No_Floating_Point
+   friend valarray acos <T>(const valarray&);
+   friend valarray asin <T>(const valarray&);
+   friend valarray atan <T>(const valarray&);
+
+   friend valarray cos <T>(const valarray&);
+   friend valarray cosh <T>(const valarray&);
+   friend valarray exp <T>(const valarray&);
+   friend valarray log <T>(const valarray&);
+   friend valarray log10 <T>(const valarray&);
+
+   friend valarray sin <T>(const valarray&);
+   friend valarray sinh <T>(const valarray&);
+   friend valarray sqrt <T>(const valarray&);
+   friend valarray tan <T>(const valarray&);
+   friend valarray tanh <T>(const valarray&);
+
+   friend valarray atan2 <T>(const valarray&, const T&);
+   friend valarray atan2 <T>(const T&, const valarray&);
+   friend valarray atan2 <T>(const valarray&, const valarray&);
+
+   friend valarray pow <T>(const valarray&, const T&);
+   friend valarray pow <T>(const T&, const valarray&);
+   friend valarray pow <T>(const valarray&, const valarray&);
+	#endif // _No_Floating_Point
+
+
+   friend T        min <T>(const valarray&);
+   friend T        max <T>(const valarray&);
+};
+
+
+class slice {
+
+public :
+    slice () : _len (0), _step (0), _offset (0) {}
+    slice (size_t offset, size_t len, size_t step)
+    : _len (len), _step (step), _offset (offset) {}
+
+    slice (const slice& s)
+    : _len (s._len), _step (s._step), _offset (s._offset) {}
+
+    size_t start () const { return _offset; }
+    size_t length () const { return _len; }
+    size_t size () const { return _len; }
+    size_t stride () const { return _step; }
+
+private :
+    size_t _len;
+    size_t _step;
+    size_t _offset;
+};
+
+template <class T> class slice_array {
+
+public :
+    typedef T  value_type;
+    void operator= (const valarray<T>&) const;
+    void operator*= (const valarray<T>&) const;
+    void operator/= (const valarray<T>&) const;
+    void operator%= (const valarray<T>&) const;
+    void operator+= (const valarray<T>&) const;
+    void operator-= (const valarray<T>&) const;
+    void operator^= (const valarray<T>&) const;
+    void operator&= (const valarray<T>&) const;
+    void operator|= (const valarray<T>&) const;
+    void operator<<= (const valarray<T>&) const;
+    void operator>>= (const valarray<T>&) const;
+
+    void operator= (const T&);
+
+private:
+    slice_array ();
+    slice_array (const slice_array&);
+    slice_array& operator =(const slice_array&);
+    slice_array (const valarray<T>&, slice);
+
+    size_t     _len;
+    T**        _ptr_ptr;
+
+    friend class valarray<T>;
+
+public:
+    ~slice_array () { if (_len) delete[] _ptr_ptr; }
+};
+
+class gslice {
+
+public :
+    gslice () : _offset (0) {}
+
+    gslice (size_t offset, const valarray<size_t>& len,
+                    const valarray<size_t>& step)
+    :_offset (offset), _len (len), _step (step) {}
+
+    gslice (const gslice& g)
+    :_offset (g._offset), _len (g._len), _step (g._step) {}
+
+    size_t   start () const { return _offset; }
+
+    valarray<size_t>  length () const { return _len; }
+
+    valarray<size_t>  size () const { return _len; }
+
+    valarray<size_t>  stride () const { return _step; }
+
+private :
+
+    valarray<size_t>  _len; // min value for any element in _len is 1.
+                            // otherwise behaviour is undefined.
+    valarray<size_t>  _step;
+    size_t            _offset;
+};
+
+// hh 971229 gslice_array was here
+
+// hh 971229 mask_array was here
+
+// hh 971229 indirect_array was here
+
+#ifndef MSIPL_MEMBER_TEMPLATE
+template <class T, class Function>
+inline valarray<T>
+val_array (const valarray<T>& v, Function func)
+{
+    size_t len  = v.length ();
+    T*     ptr  = len ? new T[len] : 0;
+    __msipl_copy_value (v.operator const T* (),
+                          v.operator const T* ()+len, ptr, func);
+    return valarray<T> (len, ptr);
+}
+
+template <class T, class Function>
+inline valarray<T>
+val_array (const valarray<T>& v1, const valarray<T>& v2, Function func)
+{
+    size_t len  = MSIPLSTD::min (v1.length (), v2.length ());
+    T*     ptr  = len ? new T[len] : 0;
+    __msipl_copy_array (v1.operator const T* (),
+                          v1.operator const T* ()+len,
+                          v2.operator const T* (), ptr, func);
+    return valarray<T> (len, ptr);
+}
+
+template <class T, class Function>
+inline valarray<T>
+val_array (const valarray<T>& v, const T& t, Function func)
+{
+    size_t len  = v.length ();
+    T*     ptr  = len ? new T[len] : 0;
+    __msipl_copy_value (v.operator const T* (),
+                          v.operator const T* ()+len,
+                          t, ptr, func);
+    return valarray<T> (len, ptr);
+}
+
+template <class T, class Function>
+inline valarray<T>
+val_array (const T& t, const valarray<T>& v, Function func)
+{
+    size_t len  = v.length ();
+    T*     ptr  = len ? new T[len] : 0;
+    __msipl_copy_value (t, v.operator const T* (),
+                          v.operator const T* ()+len, ptr, func);
+    return valarray<T> (len, ptr);
+}
+
+template <class T, class Function>
+inline valarray<bool>
+val_array_bool (const valarray<T>& v, Function func)
+{
+    size_t len  = v.length ();
+    bool*  ptr  = len ? new bool[len] : 0;
+    __msipl_copy_value (v.operator const T* (),
+                          v.operator const T* ()+len,
+                          ptr, func);
+    return valarray<bool> (len, ptr);
+}
+
+template <class T, class Function>
+inline valarray<bool>
+val_array_bool (const valarray<T>& v1, const valarray<T>& v2,
+                Function func)
+{
+    size_t len  = MSIPLSTD::min (v1.length (), v2.length ());
+    bool*  ptr  = len ? new bool[len] : 0;
+    __msipl_copy_array (v1.operator const T* (),
+                          v1.operator const T* ()+len,
+                          v2.operator const T* (), ptr, func);
+    return valarray<bool> (len, ptr);
+}
+
+template <class T, class Function>
+inline valarray<bool>
+val_array_bool (const valarray<T>& v, const T& t, Function func)
+{
+    size_t len  = v.length ();
+    bool*  ptr  = len ? new bool[len] : 0;
+    __msipl_copy_value (v.operator const T* (),
+                          v.operator const T* ()+len,
+                          t, ptr, func);
+    return valarray<bool> (len, ptr);
+}
+
+template <class T, class Function>
+inline valarray<bool>
+val_array_bool (const T& t, const valarray<T>& v, Function func)
+{
+    size_t len  = v.length ();
+    bool*  ptr  = len ? new bool[len] : 0;
+    __msipl_copy_value (t, v.operator const T* (),
+                          v.operator const T* ()+len, ptr, func);
+    return valarray<bool> (len, ptr);
+}
+#endif
+
+template <class T>
+inline valarray<T>&
+valarray<T>::operator= (const valarray& v)
+{
+    WRITE_LOCK(va_mutex);
+    if (this != &v)
+    {
+        if (length () != v.length ())
+        {
+            delete_alloc ();
+            _len = v.length ();
+            _ptr = _len ? new T[_len] : 0;
+        }
+        MSIPLSTD::copy (v._ptr, v._ptr+_len, _ptr);
+    }
+    return *this;
+}
+
+template <class T>
+inline valarray<T>&
+valarray<T>::operator= (const T& t)
+{
+    valarray<T> v (t, length ());
+    WRITE_LOCK(va_mutex);
+        MSIPLSTD::copy (v._ptr, v._ptr+_len, _ptr);
+    return *this;
+}
+
+template <class T>
+inline valarray<T>&
+valarray<T>::operator= (const slice_array<T>& s)
+{
+    size_t  len = s._len;
+    WRITE_LOCK(va_mutex);
+    T*      ptr = (len ? ((length () != len) ?  new T[len] : _ptr ) : 0);
+    __msipl_copy_iter_backward (s._ptr_ptr, s._ptr_ptr+len, ptr+len);
+    if (length () != len) { delete_alloc (); }
+    _len = len;
+    _ptr = ptr;
+    return *this;
+}
+
+template <class T>
+inline valarray<T>&
+valarray<T>::operator= (const gslice_array<T>& g)
+{
+    size_t  len = g._len;
+    WRITE_LOCK(va_mutex);
+    T*      ptr = (len ? ((length () != len) ?  new T[len] : _ptr ) : 0);
+    __msipl_copy_iter_backward (g._ptr_ptr, g._ptr_ptr+len, ptr+len);
+    if (length () != len) { delete_alloc (); }
+    _len = len;
+    _ptr = ptr;
+    return *this;
+}
+
+template <class T>
+inline valarray<T>&
+valarray<T>::operator= (const mask_array<T>& m)
+{
+    size_t  len = m._len;
+    WRITE_LOCK(va_mutex);
+    T*      ptr = (len ? ((length () != len) ?  new T[len] : _ptr ) : 0);
+    __msipl_copy_iter_backward (m._ptr_ptr, m._ptr_ptr+len, ptr+len);
+    if (length () != len) { delete_alloc (); }
+    _len = len;
+    _ptr = ptr;
+    return *this;
+}
+
+template <class T>
+inline valarray<T>&
+valarray<T>::operator= (const indirect_array<T>& i)
+{
+    size_t  len = i._len;
+    WRITE_LOCK(va_mutex);
+    T*      ptr = (len ? ((length () != len) ?  new T[len] : _ptr ) : 0);
+    __msipl_copy_iter_backward (i._ptr_ptr, i._ptr_ptr+len, ptr+len);
+    if (length () != len) { delete_alloc (); }
+    _len = len;
+    _ptr = ptr;
+    return *this;
+}
+
+template <class T>
+inline
+valarray<T> valarray<T>::operator- () const 
+{
+	READ_LOCK(va_mutex);
+	#ifdef MSIPL_MEMBER_TEMPLATE
+		return valarray<T> (*this, negate<T> ());
+	#else
+		return val_array (*this, negate<T> ());
+	#endif
+}
+
+template <class T>
+inline
+valarray<T> valarray<T>::operator~ () const
+{
+	READ_LOCK(va_mutex);
+	#ifdef MSIPL_MEMBER_TEMPLATE
+		return valarray<T> (*this, __msipl_complement<T> ());
+	#else
+		return val_array (*this, __msipl_complement<T> ());
+	#endif
+}
+
+template <class T>
+inline
+valarray<T> valarray<T>::operator! () const
+{
+	READ_LOCK(va_mutex);
+	#ifdef MSIPL_MEMBER_TEMPLATE
+		return valarray<T> (*this, __msipl_not<T> ());
+	#else
+		return val_array (*this, __msipl_not<T> ());
+	#endif
+}
+
+template <class T>
+inline
+valarray<T>& valarray<T>::operator*= (const T& t)
+{
+	WRITE_LOCK(va_mutex);
+	__msipl_copy_value (_ptr, _ptr+length (), t, _ptr, multiplies<T> ());
+	return *this;
+}
+
+template <class T>
+inline
+valarray<T>& valarray<T>::operator/= (const T& t)
+{
+	WRITE_LOCK(va_mutex);
+	__msipl_copy_value (_ptr, _ptr+length (), t, _ptr, divides<T> ());
+	return *this;
+}
+
+template <class T>
+inline
+valarray<T>& valarray<T>::operator%= (const T& t)
+{
+	WRITE_LOCK(va_mutex);
+	__msipl_copy_value (_ptr, _ptr+length (), t, _ptr, modulus<T> ());
+	return *this;
+}
+
+template <class T>
+inline
+valarray<T>& valarray<T>::operator+= (const T& t)
+{
+	WRITE_LOCK(va_mutex);
+	__msipl_copy_value (_ptr, _ptr+length (), t, _ptr, plus<T> ());
+	return *this;
+}
+
+template <class T>
+inline
+valarray<T>& valarray<T>::operator-= (const T& t)
+{
+	WRITE_LOCK(va_mutex);
+	__msipl_copy_value (_ptr, _ptr+length (), t, _ptr, minus<T> ());
+	return *this;
+}
+
+template <class T>
+inline
+valarray<T>& valarray<T>::operator^= (const T& t)
+{
+	WRITE_LOCK(va_mutex);
+	__msipl_copy_value (_ptr, _ptr+length (), t, _ptr, __msipl_caret<T> ());
+	return *this;
+}
+
+template <class T>
+inline
+valarray<T>& valarray<T>::operator&= (const T& t)
+{
+	WRITE_LOCK(va_mutex);
+	__msipl_copy_value (_ptr, _ptr+length (), t, _ptr, __msipl_bitwise_and<T> ());
+	return *this;
+}
+
+template <class T>
+inline
+valarray<T>& valarray<T>::operator|= (const T& t)
+{
+	WRITE_LOCK(va_mutex);
+	__msipl_copy_value (_ptr, _ptr+length (), t, _ptr, __msipl_bitwise_or<T> ());
+	return *this;
+}
+
+template <class T>
+inline
+valarray<T>& valarray<T>::operator<<= (const T& t)
+{
+	WRITE_LOCK(va_mutex);
+	__msipl_copy_value (_ptr, _ptr+length (), t, _ptr, __msipl_shift_left<T> ());
+	return *this;
+}
+
+template <class T>
+inline
+valarray<T>& valarray<T>::operator>>= (const T& t)
+{
+	WRITE_LOCK(va_mutex);
+	__msipl_copy_value (_ptr, _ptr+length (), t, _ptr, __msipl_shift_right<T> ());
+	return *this;
+}
+
+template <class T>
+inline
+valarray<T>& valarray<T>::operator*= (const valarray& v)
+{
+	WRITE_LOCK(va_mutex);
+	size_t rlen = MSIPLSTD::min (length (), v.length ());
+	__msipl_copy_array (_ptr, _ptr+rlen, v.operator const T* (), _ptr, multiplies<T> ());
+	return *this;
+}
+
+template <class T>
+inline
+valarray<T>& valarray<T>::operator/= (const valarray& v)
+{
+	WRITE_LOCK(va_mutex);
+	size_t rlen = MSIPLSTD::min (length (), v.length ());
+	__msipl_copy_array (_ptr, _ptr+rlen, v.operator const T* (), _ptr, divides<T> ());
+	return *this;
+}
+
+template <class T>
+inline
+valarray<T>& valarray<T>::operator%= (const valarray& v)
+{
+	WRITE_LOCK(va_mutex);
+	size_t rlen = MSIPLSTD::min (length (), v.length ());
+	__msipl_copy_array (_ptr, _ptr+rlen, v.operator const T* (), _ptr, modulus<T> ());
+	return *this;
+}
+
+template <class T>
+inline
+valarray<T>& valarray<T>::operator+= (const valarray& v)
+{
+	WRITE_LOCK(va_mutex);
+	size_t rlen = MSIPLSTD::min (length (), v.length ());
+	__msipl_copy_array (_ptr, _ptr+rlen, v.operator const T* (), _ptr, plus<T> ());
+	return *this;
+}
+
+template <class T>
+inline
+valarray<T>& valarray<T>::operator-= (const valarray& v)
+{
+	WRITE_LOCK(va_mutex);
+	size_t rlen = MSIPLSTD::min (length (), v.length ());
+	__msipl_copy_array (_ptr, _ptr+rlen, v.operator const T* (), _ptr, minus<T> ());
+	return *this;
+}
+
+template <class T>
+inline
+valarray<T>& valarray<T>::operator^= (const valarray& v)
+{
+	WRITE_LOCK(va_mutex);
+	size_t rlen =  MSIPLSTD::min (length (), v.length ());
+	__msipl_copy_array (_ptr, _ptr+rlen, v.operator const T* (),
+		_ptr, __msipl_caret<T> ());
+	return *this;
+}
+
+template <class T>
+inline
+valarray<T>& valarray<T>::operator&= (const valarray& v)
+{
+	WRITE_LOCK(va_mutex);
+	size_t rlen = MSIPLSTD::min (length (), v.length ());
+	__msipl_copy_array (_ptr, _ptr+rlen, v.operator const T* (),
+		_ptr, __msipl_bitwise_and<T> ());
+	return *this;
+}
+
+template <class T>
+inline
+valarray<T>& valarray<T>::operator|= (const valarray& v)
+{
+	WRITE_LOCK(va_mutex);
+	size_t rlen = MSIPLSTD::min (length (), v.length ());
+	__msipl_copy_array (_ptr, _ptr+rlen, v.operator const T* (),
+		_ptr, __msipl_bitwise_or<T> ());
+	return *this;
+}
+
+template <class T>
+inline
+valarray<T>& valarray<T>::operator<<= (const valarray& v)
+{
+	WRITE_LOCK(va_mutex);
+	size_t rlen = MSIPLSTD::min (length (), v.length ());
+	__msipl_copy_array (_ptr, _ptr+rlen, v.operator const T* (),
+		_ptr, __msipl_shift_left<T> ());
+	return *this;
+}
+
+template <class T>
+inline
+valarray<T>& valarray<T>::operator>>= (const valarray& v)
+{
+	WRITE_LOCK(va_mutex);
+	size_t rlen = MSIPLSTD::min (length (), v.length ());
+	__msipl_copy_array (_ptr, _ptr+rlen, v.operator const T* (), _ptr,
+		__msipl_shift_right<T> ());
+	return *this;
+}
+
+template <class T>
+inline
+T valarray<T>::mult (size_t len) const
+{
+    T  prod = 1;
+    READ_LOCK(va_mutex);
+    size_t rlen = MSIPLSTD::min (len, length ());
+    for (size_t count = 0; count < rlen; ++count)
+        prod *= (*(_ptr+count));
+    return prod;
+}
+
+template <class T>
+inline
+T valarray<T>::min () const
+{
+    T   min_val = T ();
+    READ_LOCK(va_mutex);
+    if (length ()) min_val = *_ptr;
+    for (size_t count = 1; count < length (); ++count)
+    {
+        if (min_val > (*(_ptr+count)))
+            min_val = (*(_ptr+count));
+    }
+    return min_val;
+}
+
+template <class T>
+inline
+T valarray<T>::max () const
+{
+    T   max_val = T ();
+    READ_LOCK(va_mutex);
+    if (length ()) max_val = *_ptr;
+    for (size_t count = 1; count < length (); ++count)
+    {
+        if (max_val < (*(_ptr+count)))
+            max_val = (*(_ptr+count));
+    }
+    return max_val;
+}
+
+template <class T>
+inline valarray<T> valarray<T>::shift (int i) const
+{
+    // Take the absolute value of i in j.
+    int j = (i > 0) ? i : -i;
+
+    READ_LOCK(va_mutex);
+    size_t len  = length ();
+    valarray<T> ret (T (), len);
+
+    if ( i < 0 )
+        MSIPLSTD::copy (_ptr, _ptr+len-j, ret._ptr+j);
+    if ( i >= 0 )
+        MSIPLSTD::copy (_ptr+j, _ptr+len, ret._ptr);
+    return ret;
+}
+
+template <class T>
+inline valarray<T> valarray<T>::cshift (int i) const
+{
+    READ_LOCK(va_mutex);
+    // Take the absolute value of i in j.
+    int j = (i > 0) ? i : -i;
+
+    if (j >= length ()) j = j % length ();
+
+    size_t len  = length ();
+    valarray<T> ret (T (), len);
+
+    if ( i < 0 )
+    {
+         MSIPLSTD::copy (_ptr+len-j, _ptr+len, ret._ptr);
+         MSIPLSTD::copy (_ptr, _ptr+len-j, ret._ptr+j);
+    }
+    else if ( i > 0 )
+    {
+         MSIPLSTD::copy (_ptr+j, _ptr+len, ret._ptr);
+         MSIPLSTD::copy (_ptr, _ptr+j, ret._ptr+len-j);
+    }
+    else
+    {
+         MSIPLSTD::copy (_ptr, _ptr+len, ret._ptr);
+    }
+
+    return ret;
+}
+
+template <class T>
+inline valarray<T> valarray<T>::apply (T func (T)) const
+{
+    READ_LOCK(va_mutex);
+    size_t len  = length ();
+    T*     ptr  = len ? new T[len] : 0;
+    __msipl_copy_value (_ptr, _ptr+len, ptr, func);
+    return valarray<T> (len, ptr);
+}
+
+template <class T>
+inline valarray<T> valarray<T>::apply (T func (const T&)) const
+{
+    READ_LOCK(va_mutex);
+    size_t len  = length ();
+    T*     ptr  = len ? new T[len] : 0;
+    __msipl_copy_value (_ptr, _ptr+len, ptr, func);
+    return valarray<T> (len, ptr);
+}
+
+template <class T>
+inline
+T valarray<T>::sum () const 
+{
+	T  total;
+	READ_LOCK(va_mutex);
+	if (length ())
+		total = *_ptr;
+	return MSIPLSTD::accumulate (_ptr+1, _ptr+length (), total);
+}
+
+template <class T>
+inline void valarray<T>::resize (size_t sz, T c)
+{
+    WRITE_LOCK(va_mutex);
+    valarray<T>  v1(*this);
+
+    if (sz < _len)
+    {
+        delete_alloc ();
+        _ptr = new T[sz+1];
+        _len = sz;
+        MSIPLSTD::copy (v1._ptr, v1._ptr+sz, _ptr);
+    }
+    else if (sz > _len)
+    {
+        delete_alloc ();
+        _ptr = new T[sz+1];
+        _len = sz;
+        valarray<T>  v2(c, (sz-v1.length ()));
+
+        MSIPLSTD::copy (v1._ptr, v1._ptr+v1._len, _ptr);
+        MSIPLSTD::copy (v2._ptr, v2._ptr+v2._len, _ptr+v1._len);
+    }
+}
+
+template <class T>
+inline
+valarray<T> operator* (const valarray<T>& v, const T& t)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, t, multiplies<T> ());
+#else
+    return val_array (v, t, multiplies<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T> operator* (const T& t, const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (t, v, multiplies<T> ());
+#else
+    return val_array (t, v, multiplies<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T> operator* (const valarray<T>& v1, const valarray<T>& v2)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v1, v2, multiplies<T> ());
+#else
+    return val_array (v1, v2, multiplies<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T> operator/ (const valarray<T>& v, const T& t)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, t, divides<T> ());
+#else
+    return val_array (v, t, divides<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T> operator/ (const T& t, const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (t, v, divides<T> ());
+#else
+    return val_array (t, v, divides<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T> operator/ (const valarray<T>& v1, const valarray<T>& v2)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v1, v2, divides<T> ());
+#else
+    return val_array (v1, v2, divides<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T> operator% (const valarray<T>& v, const T& t)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, t, modulus<T> ());
+#else
+    return val_array (v, t, modulus<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T> operator% (const T& t, const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (t, v, modulus<T> ());
+#else
+    return val_array (t, v, modulus<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T> operator% (const valarray<T>& v1, const valarray<T>& v2)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v1, v2, modulus<T> ());
+#else
+    return val_array (v1, v2, modulus<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T> operator+ (const valarray<T>& v, const T& t)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, t, plus<T> ());
+#else
+    return val_array (v, t, plus<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T> operator+ (const T& t, const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (t, v, plus<T> ());
+#else
+    return val_array (t, v, plus<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T> operator+ (const valarray<T>& v1, const valarray<T>& v2)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v1, v2, plus<T> ());
+#else
+    return val_array (v1, v2, plus<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T> operator- (const valarray<T>& v, const T& t)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, t, minus<T> ());
+#else
+    return val_array (v, t, minus<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T> operator- (const T& t, const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (t, v, minus<T> ());
+#else
+    return val_array (t, v, minus<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T> operator- (const valarray<T>& v1, const valarray<T>& v2)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v1, v2, minus<T> ());
+#else
+    return val_array (v1, v2, minus<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T> operator^ (const valarray<T>& v, const T& t)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, t, __msipl_caret<T> ());
+#else
+    return val_array (v, t, __msipl_caret<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T> operator^ (const T& t, const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (t, v, __msipl_caret<T> ());
+#else
+    return val_array (t, v, __msipl_caret<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+operator^ (const valarray<T>& v1, const valarray<T>& v2)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v1, v2, __msipl_caret<T> ());
+#else
+    return val_array (v1, v2, __msipl_caret<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+operator& (const valarray<T>& v, const T& t)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, t, __msipl_bitwise_and<T> ());
+#else
+    return val_array (v, t, __msipl_bitwise_and<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+operator& (const T& t, const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (t, v, __msipl_bitwise_and<T> ());
+#else
+    return val_array (t, v, __msipl_bitwise_and<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+operator& (const valarray<T>& v1, const valarray<T>& v2)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v1, v2, __msipl_bitwise_and<T> ());
+#else
+    return val_array (v1, v2, __msipl_bitwise_and<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+operator| (const valarray<T>& v, const T& t)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, t, __msipl_bitwise_or<T> ());
+#else
+    return val_array (v, t, __msipl_bitwise_or<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+operator| (const T& t, const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (t, v, __msipl_bitwise_or<T> ());
+#else
+    return val_array (t, v, __msipl_bitwise_or<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+operator| (const valarray<T>& v1, const valarray<T>& v2)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v1, v2, __msipl_bitwise_or<T> ());
+#else
+    return val_array (v1, v2, __msipl_bitwise_or<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+operator<< (const valarray<T>& v, const T& t)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, t, __msipl_shift_left<T> ());
+#else
+    return val_array (v, t, __msipl_shift_left<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+operator<< (const T& t, const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (t, v, __msipl_shift_left<T> ());
+#else
+    return val_array (t, v, __msipl_shift_left<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+operator<< (const valarray<T>& v1, const valarray<T>& v2)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v1, v2, __msipl_shift_left<T> ());
+#else
+    return val_array (v1, v2, __msipl_shift_left<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+operator>> (const valarray<T>& v, const T& t)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, t, __msipl_shift_right<T> ());
+#else
+    return val_array (v, t, __msipl_shift_right<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+operator>> (const T& t, const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (t, v, __msipl_shift_right<T> ());
+#else
+    return val_array (t, v, __msipl_shift_right<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+operator>> (const valarray<T>& v1, const valarray<T>& v2)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v1, v2, __msipl_shift_right<T> ());
+#else
+    return val_array (v1, v2, __msipl_shift_right<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator&& (const valarray<T>& v, const T& t)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (v, t, __msipl_and<T> ());
+#else
+    return val_array_bool (v, t, __msipl_and<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator&& (const T& t, const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (t, v, __msipl_and<T> ());
+#else
+    return val_array_bool (t, v, __msipl_and<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator&& (const valarray<T>& v1, const valarray<T>& v2)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (v1, v2, __msipl_and<T> ());
+#else
+    return val_array_bool (v1, v2, __msipl_and<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator|| (const valarray<T>& v, const T& t)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (v, t, __msipl_or<T> ());
+#else
+    return val_array_bool (v, t, __msipl_or<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator|| (const T& t, const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (t, v, __msipl_or<T> ());
+#else
+    return val_array_bool (t, v, __msipl_or<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator|| (const valarray<T>& v1, const valarray<T>& v2)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (v1, v2, __msipl_or<T> ());
+#else
+    return val_array_bool (v1, v2, __msipl_or<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator== (const valarray<T>& v, const T& t)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (v, t, equal_to<T> ());
+#else
+    return val_array_bool (v, t, equal_to<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator== (const T& t, const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (t, v, equal_to<T> ());
+#else
+    return val_array_bool (t, v, equal_to<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator== (const valarray<T>& v1, const valarray<T>& v2)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (v1, v2, equal_to<T> ());
+#else
+    return val_array_bool (v1, v2, equal_to<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator!= (const valarray<T>& v, const T& t)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (v, t, not_equal_to<T> ());
+#else
+    return val_array_bool (v, t, not_equal_to<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator!= (const T& t, const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (t, v, not_equal_to<T> ());
+#else
+    return val_array_bool (t, v, not_equal_to<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator!= (const valarray<T>& v1, const valarray<T>& v2)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (v1, v2, not_equal_to<T> ());
+#else
+    return val_array_bool (v1, v2, not_equal_to<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator< (const valarray<T>& v, const T& t)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (v, t, less<T> ());
+#else
+    return val_array_bool (v, t, less<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator< (const T& t, const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (t, v, less<T> ());
+#else
+    return val_array_bool (t, v, less<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator< (const valarray<T>& v1, const valarray<T>& v2)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (v1, v2, less<T> ());
+#else
+    return val_array_bool (v1, v2, less<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator> (const valarray<T>& v, const T& t)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (v, t, greater<T> ());
+#else
+    return val_array_bool (v, t, greater<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator> (const T& t, const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (t, v, greater<T> ());
+#else
+    return val_array_bool (t, v, greater<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator> (const valarray<T>& v1, const valarray<T>& v2)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (v1, v2, greater<T> ());
+#else
+    return val_array_bool (v1, v2, greater<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator<= (const valarray<T>& v, const T& t)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (v, t, less_equal<T> ());
+#else
+    return val_array_bool (v, t, less_equal<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator<= (const T& t, const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (t, v, less_equal<T> ());
+#else
+    return val_array_bool (t, v, less_equal<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator<= (const valarray<T>& v1, const valarray<T>& v2)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (v1, v2, less_equal<T> ());
+#else
+    return val_array_bool (v1, v2, less_equal<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator>= (const valarray<T>& v, const T& t)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (v, t, greater_equal<T> ());
+#else
+    return val_array_bool (v, t, greater_equal<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator>= (const T& t, const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (t, v, greater_equal<T> ());
+#else
+    return val_array_bool (t, v, greater_equal<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<bool>
+operator>= (const valarray<T>& v1, const valarray<T>& v2)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<bool> (v1, v2, greater_equal<T> ());
+#else
+    return val_array_bool (v1, v2, greater_equal<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+abs (const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, __msipl_absolute<T> ());
+#else
+    return val_array (v, __msipl_absolute<T> ());
+#endif
+}
+
+#ifndef _No_Floating_Point
+
+template <class T>
+inline
+valarray<T>
+acos (const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, __msipl_arccos<T> ());
+#else
+    return val_array (v, __msipl_arccos<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+asin (const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, __msipl_arcsin<T> ());
+#else
+    return val_array (v, __msipl_arcsin<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+atan (const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, __msipl_arctan<T> ());
+#else
+    return val_array (v, __msipl_arctan<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+cos (const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, __msipl_cosine<T> ());
+#else
+    return val_array (v, __msipl_cosine<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+cosh (const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, __msipl_cosineh<T> ());
+#else
+    return val_array (v, __msipl_cosineh<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+exp (const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, __msipl_exponential<T> ());
+#else
+    return val_array (v, __msipl_exponential<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+log (const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v,__msipl_logarithm<T> ());
+#else
+    return val_array (v,__msipl_logarithm<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+log10 (const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v,__msipl_logarithm10<T> ());
+#else
+    return val_array (v,__msipl_logarithm10<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+sin (const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, __msipl_sine<T> ());
+#else
+    return val_array (v, __msipl_sine<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+sinh (const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, __msipl_sineh<T> ());
+#else
+    return val_array (v, __msipl_sineh<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+sqrt (const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, __msipl_sqroot<T> ());
+#else
+    return val_array (v, __msipl_sqroot<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+tan (const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, __msipl_tangent<T> ());
+#else
+    return val_array (v, __msipl_tangent<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+tanh (const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, __msipl_tangenth<T> ());
+#else
+    return val_array (v, __msipl_tangenth<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+atan2 (const valarray<T>& v, const T& t)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, t, __msipl_arctan2<T> ());
+#else
+    return val_array (v, t, __msipl_arctan2<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+atan2 (const T& t, const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (t, v, __msipl_arctan2<T> ());
+#else
+    return val_array (t, v, __msipl_arctan2<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+atan2 (const valarray<T>& v1, const valarray<T>& v2)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v1, v2, __msipl_arctan2<T> ());
+#else
+    return val_array (v1, v2, __msipl_arctan2<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+pow (const valarray<T>& v, const T& t)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v, t, __msipl_power<T> ());
+#else
+    return val_array (v, t, __msipl_power<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+pow (const T& t, const valarray<T>& v)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (t, v, __msipl_power<T> ());
+#else
+    return val_array (t, v, __msipl_power<T> ());
+#endif
+}
+
+template <class T>
+inline
+valarray<T>
+pow (const valarray<T>& v1, const valarray<T>& v2)
+{
+#ifdef MSIPL_MEMBER_TEMPLATE
+    return valarray<T> (v1, v2, __msipl_power<T> ());
+#else
+    return val_array (v1, v2, __msipl_power<T> ());
+#endif
+}
+
+#endif // _No_Floating_Point
+
+template <class T>
+inline
+T
+min (const valarray<T>& v)
+{
+    T   min_val = T ();
+    if (v.length ()) min_val = *v._ptr;
+    for (size_t count = 1; count < v.length (); ++count)
+    {
+        if (min_val > (*(v._ptr+count)))
+            min_val = (*(v._ptr+count));
+    }
+    return min_val;
+}
+
+template <class T>
+inline
+T
+max (const valarray<T>& v)
+{
+    T   max_val = T ();
+    if (v.length ()) max_val = *v._ptr;
+    for (size_t count = 1; count < v.length (); ++count)
+    {
+        if (max_val < (*(v._ptr+count)))
+            max_val = (*(v._ptr+count));
+    }
+    return max_val;
+}
+
+template <class T>
+inline
+slice_array<T>::slice_array (const slice_array& s)
+:_len (s._len), _ptr_ptr (_len ? new T*[_len] : 0)
+{
+    MSIPLSTD::copy (s._ptr_ptr, s._ptr_ptr+_len, _ptr_ptr);
+}
+
+template <class T>
+inline
+void
+slice_array<T>::operator= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (), 
+                             v.operator const T* ()+rlen, _ptr_ptr+rlen);
+}
+
+template <class T>
+inline
+void
+slice_array<T>::operator*= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                            v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                            _ptr_ptr+rlen, multiplies<T> ());
+}
+
+template <class T>
+inline
+void
+slice_array<T>::operator/= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                             v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                             _ptr_ptr+rlen, divides<T> ());
+}
+
+template <class T>
+inline
+void
+slice_array<T>::operator%= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                            v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                            _ptr_ptr+rlen, modulus<T> ());
+}
+
+template <class T>
+inline
+void
+slice_array<T>::operator+= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                             v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                             _ptr_ptr+rlen, plus<T> ());
+}
+
+template <class T>
+inline
+void
+slice_array<T>::operator-= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                             v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                             _ptr_ptr+rlen, minus<T> ());
+}
+
+template <class T>
+inline
+void
+slice_array<T>::operator^= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                             v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                             _ptr_ptr+rlen, __msipl_caret<T> ());
+}
+
+template <class T>
+inline
+void
+slice_array<T>::operator&= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                             v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                             _ptr_ptr+rlen, __msipl_bitwise_and<T> ());
+}
+
+template <class T>
+inline
+void
+slice_array<T>::operator|= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                             v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                             _ptr_ptr+rlen, __msipl_bitwise_or<T> ());
+}
+
+template <class T>
+inline
+void
+slice_array<T>::operator<<= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                             v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                             _ptr_ptr+rlen, __msipl_shift_left<T> ());
+}
+
+template <class T>
+inline
+void
+slice_array<T>::operator>>= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                             v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                             _ptr_ptr+rlen, __msipl_shift_right<T> ());
+}
+
+template <class T>
+inline
+void
+slice_array<T>::operator= (const T& t)
+{
+    __msipl_fill_iter_n (_ptr_ptr, _len, t);
+}
+
+template <class T>
+inline
+gslice_array<T>::gslice_array (const gslice_array& g)
+:_len (g._len), _ptr_ptr (_len ? new T*[_len] : 0)
+{
+    MSIPLSTD::copy (g._ptr_ptr, g._ptr_ptr+_len, _ptr_ptr);
+}
+
+template <class T>
+inline
+void
+gslice_array<T>::operator= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (), 
+                              v.operator const T* ()+rlen, _ptr_ptr+rlen);
+}
+
+template <class T>
+inline
+void
+gslice_array<T>::operator*= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                            v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                            _ptr_ptr+rlen, multiplies<T> ());
+}
+
+template <class T>
+inline
+void
+gslice_array<T>::operator/= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                            v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                            _ptr_ptr+rlen, divides<T> ());
+}
+
+template <class T>
+inline
+void
+gslice_array<T>::operator%= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                            v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                            _ptr_ptr+rlen, modulus<T> ());
+}
+
+template <class T>
+inline
+void
+gslice_array<T>::operator+= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                             v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                             _ptr_ptr+rlen, plus<T> ());
+}
+
+template <class T>
+inline
+void
+gslice_array<T>::operator-= (const valarray<T>& v) const
+{
+    size_t rlen = ::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                              v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                              _ptr_ptr+rlen, minus<T> ());
+}
+
+template <class T>
+inline
+void
+gslice_array<T>::operator^= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                             v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                             _ptr_ptr+rlen, __msipl_caret<T> ());
+}
+
+template <class T>
+inline
+void
+gslice_array<T>::operator&= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                              v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                              _ptr_ptr+rlen, __msipl_bitwise_and<T> ());
+}
+
+template <class T>
+inline
+void
+gslice_array<T>::operator|= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                              v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                              _ptr_ptr+rlen, __msipl_bitwise_or<T> ());
+}
+
+template <class T>
+inline
+void
+gslice_array<T>::operator<<= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                              v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                              _ptr_ptr+rlen, __msipl_shift_left<T> ());
+}
+
+template <class T>
+inline
+void
+gslice_array<T>::operator>>= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                              v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                              _ptr_ptr+rlen, __msipl_shift_right<T> ());
+}
+
+template <class T>
+inline
+void
+gslice_array<T>::operator= (const T& t)
+{
+    __msipl_fill_iter_n (_ptr_ptr, _len, t);
+}
+
+template <class T>
+inline
+mask_array<T>::mask_array (const mask_array& m)
+:_len (m._len), _ptr_ptr (_len ? new T*[_len] : 0)
+{
+    MSIPLSTD::copy (m._ptr_ptr, m._ptr_ptr+_len, _ptr_ptr);
+}
+
+template <class T>
+inline
+void
+mask_array<T>::operator= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (), 
+                             v.operator const T* ()+rlen, _ptr_ptr+rlen);
+}
+
+template <class T>
+inline
+void
+mask_array<T>::operator*= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                              v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                              _ptr_ptr+rlen, multiplies<T> ());
+}
+
+template <class T>
+inline
+void
+mask_array<T>::operator/= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                             v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                             _ptr_ptr+rlen, divides<T> ());
+}
+
+template <class T>
+inline
+void
+mask_array<T>::operator%= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                              v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                              _ptr_ptr+rlen, modulus<T> ());
+}
+
+template <class T>
+inline
+void
+mask_array<T>::operator+= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                              v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                              _ptr_ptr+rlen, plus<T> ());
+}
+
+template <class T>
+inline
+void
+mask_array<T>::operator-= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                              v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                              _ptr_ptr+rlen, minus<T> ());
+}
+
+template <class T>
+inline
+void
+mask_array<T>::operator^= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                              v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                              _ptr_ptr+rlen, __msipl_caret<T> ());
+}
+
+template <class T>
+inline
+void
+mask_array<T>::operator&= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                              v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                              _ptr_ptr+rlen, __msipl_bitwise_and<T> ());
+}
+
+template <class T>
+inline
+void
+mask_array<T>::operator|= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                              v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                              _ptr_ptr+rlen, __msipl_bitwise_or<T> ());
+}
+
+template <class T>
+inline
+void
+mask_array<T>::operator<<= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                               v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                               _ptr_ptr+rlen, __msipl_shift_left<T> ());
+}
+
+template <class T>
+inline
+void
+mask_array<T>::operator>>= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                               v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                               _ptr_ptr+rlen, __msipl_shift_right<T> ());
+}
+
+template <class T>
+inline
+void
+mask_array<T>::operator= (const T& t)
+{
+    __msipl_fill_iter_n (_ptr_ptr, _len, t);
+}
+
+template <class T>
+inline
+indirect_array<T>::indirect_array (const indirect_array& i)
+:_len (i._len), _ptr_ptr (_len ? new T*[_len] : 0)
+{
+    MSIPLSTD::copy (i._ptr_ptr, i._ptr_ptr+_len, _ptr_ptr);
+}
+
+template <class T>
+inline
+void
+indirect_array<T>::operator= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (), 
+                                  v.operator const T* ()+rlen, _ptr_ptr+rlen);
+}
+
+template <class T>
+inline
+void
+indirect_array<T>::operator*= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                              v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                              _ptr_ptr+rlen, multiplies<T> ());
+}
+
+template <class T>
+inline
+void
+indirect_array<T>::operator/= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                               v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                               _ptr_ptr+rlen, divides<T> ());
+}
+
+template <class T>
+inline
+void
+indirect_array<T>::operator%= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                               v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                               _ptr_ptr+rlen, modulus<T> ());
+}
+
+template <class T>
+inline
+void
+indirect_array<T>::operator+= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                               v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                               _ptr_ptr+rlen, plus<T> ());
+}
+
+template <class T>
+inline
+void
+indirect_array<T>::operator-= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                              v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                              _ptr_ptr+rlen, minus<T> ());
+}
+
+template <class T>
+inline
+void
+indirect_array<T>::operator^= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                              v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                              _ptr_ptr+rlen, __msipl_caret<T> ());
+}
+
+template <class T>
+inline
+void
+indirect_array<T>::operator&= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                              v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                              _ptr_ptr+rlen, __msipl_bitwise_and<T> ());
+}
+
+template <class T>
+inline
+void
+indirect_array<T>::operator|= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                               v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                               _ptr_ptr+rlen, __msipl_bitwise_or<T> ());
+}
+
+template <class T>
+inline
+void
+indirect_array<T>::operator<<= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                              v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                              _ptr_ptr+rlen, __msipl_shift_left<T> ());
+}
+
+template <class T>
+inline
+void
+indirect_array<T>::operator>>= (const valarray<T>& v) const
+{
+    size_t rlen = MSIPLSTD::min (_len, v.length ());
+    __msipl_iter_copy_backward (v.operator const T* (),
+                              v.operator const T* ()+rlen, _ptr_ptr+rlen,
+                              _ptr_ptr+rlen, __msipl_shift_right<T> ());
+}
+
+template <class T>
+inline
+void
+indirect_array<T>::operator= (const T& t)
+{
+    __msipl_fill_iter_n (_ptr_ptr, _len, t);
+}
+
+template <class T>
+inline
+slice_array<T>::slice_array (const valarray<T>& v, slice s)
+{
+    _len = MSIPLSTD::min (s.length (), ((v.length ()-s.start ())/s.stride ())+1);
+    _ptr_ptr = _len ? new T*[_len] : 0;
+    for (size_t count = 0; count < _len; ++count)
+    {
+        * (_ptr_ptr+count) = (T*)((v.operator const T* ())+
+                                  s.start ()+ (count*s.stride ()));
+    }
+}
+
+template <class T>
+inline
+gslice_array<T>::gslice_array (const valarray<T>& v, const gslice& g)
+{
+    const valarray<size_t>  slen (g.length ());
+    const valarray<size_t>  sstp (g.stride ());
+
+    size_t mlen =  MSIPLSTD::min (slen.length (), sstp.length ());
+    _len        =  slen.mult (mlen);
+
+    size_t*   ptr  = _len ? new size_t[_len] : 0;
+    store_pointer _sptr (ptr);
+    size_t*   muli = mlen ? new size_t[mlen] : 0;
+    store_pointer _smuli (muli);
+    size_t*   mulc = mlen ? new size_t[mlen] : 0;
+    store_pointer _smulc (mulc);
+
+    size_t count;
+    for (count = 0; count < mlen; ++count)
+    {
+        *(muli+count) = 0;
+        * (mulc+mlen-count-1) = slen.mult (mlen-count-1);
+    }
+
+    for (count = 0; count < _len; ++count)
+    {
+        * (ptr+count) = g.start ();
+        size_t  len; 
+        for (len = 0; len < mlen; ++len)
+        {
+             *(ptr+count) += (*(muli+len))*(sstp[len]);
+        }
+        for (len = 0; len < mlen; ++len)
+        {
+             if (! ((count+1) % (* (mulc+len))))
+             {
+                 ++ (* (muli+len));
+                 *(muli+len) %= slen[len];
+             }
+        }
+        
+    }
+
+    sort (ptr, ptr+_len);
+    size_t*  bptr = lower_bound (ptr, ptr+_len, v.length ());
+
+    _len = 0;
+
+    _len = distance (ptr, bptr);
+    _ptr_ptr = _len ? new T*[_len] : 0;
+    for (count = 0; count < _len; ++count)
+        * (_ptr_ptr+count) = (T*)((v.operator const T* ())+ (* (ptr+count)));
+}
+
+template <class T>
+inline
+mask_array<T>::mask_array (const valarray<T>& v, const valarray<bool>& vb)
+{
+    _len = 0;
+    size_t count;
+    size_t rlen = MSIPLSTD::min (vb.length (), v.length ());
+
+    for (count = 0; count < rlen; ++count)
+         if (vb[count]) ++_len;
+
+    _ptr_ptr = _len ? new T*[_len] : 0;
+    _len     = 0;
+
+    for (count = 0; count < rlen; ++count)
+    {
+         if (vb[count])
+         {
+             * (_ptr_ptr+_len) = (T*)((v.operator const T* ())+count);
+             ++_len;
+         }
+    }
+}
+
+template <class T>
+inline
+indirect_array<T>::indirect_array (const valarray<T>& v, 
+                                   const valarray<size_t>& vi)
+{
+//
+// elements of vi should be less than v.length ()
+// otherwise behaviour is undefined.
+//
+    _len = vi.length ();
+    _ptr_ptr = _len ? new T*[_len] : 0;
+
+    for (size_t count = 0; count < _len; ++count)
+        *(_ptr_ptr+count) = (T*)((v.operator const T* ())+vi[count]);
+}
+
+#ifdef MSIPL_USING_NAMESPACE
+	} // namespace std
+#endif
+
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import reset
+#endif
+#pragma options align=reset
+
+#endif // RC_INVOKED
+
+#endif /* MSIPL_VALARRAY_H */
+
+// hh 971220 fixed MOD_INCLUDE
+// hh 971226 added alignment wrapper
+// hh 971226 Changed filename from valarray.h to valarray
+// hh 971226 Made include guards standard
+// hh 971226 added MSIPLSTD to min in valarray constructor
+// hh 971229 Changed the friend declarations to not require member templates
+// hh 971229 removed :: from fill_n in fill
+// hh 971229 added val_array prototypes
+// hh 971229 gslice_array, indirect_array and mask_array moved up in file to avoid "using
+//           incomplete type" errors.
+// hh 971230 added RC_INVOKED wrapper
+// hh 980408 wrapped in #ifndef _No_Floating_Point

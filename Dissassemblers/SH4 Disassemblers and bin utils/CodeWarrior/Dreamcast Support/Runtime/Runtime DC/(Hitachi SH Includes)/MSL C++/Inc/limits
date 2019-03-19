@@ -1,0 +1,768 @@
+/*  Metrowerks Standard Library  Version 4.0  1998 August 10  */
+
+/*  $Date:: 6/18/98 12:27 PM                                 $ 
+ *  $Revision:: 12                                           $ 
+ *  $NoKeywords: $ 
+ *
+ *		Portions Copyright © 1995-1998 Metrowerks, Inc.
+ *		All rights reserved.
+ */
+
+/**
+ **  limits       // hh 971227 changed file name from mlimits.h to limits
+ **
+ **  Lib++  : The Modena C++ Standard Library,
+ **           Version 2.4, October 1997
+ **
+ **  Copyright (c) 1995-1997 Modena Software Inc.
+ **/
+
+#ifndef _LIMITS    // hh 971227 made include guards standard
+#define _LIMITS
+
+#include <mcompile.h>
+
+#include <cfloat>    // hh 971220 fixed MOD_C_INCLUDE
+#include <climits>   // hh 971220 fixed MOD_C_INCLUDE
+#include <cmath>
+#ifdef MSIPL_WCHART  // hh 980107 added
+	#include <cwchar>
+#endif
+
+#ifndef RC_INVOKED // hh 971230
+
+#pragma options align=native
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import on
+#endif
+
+#ifdef MSIPL_USING_NAMESPACE
+	namespace std {
+#endif
+
+enum float_round_style {
+	round_indeterminate       = -1,
+	round_toward_zero         =  0,
+	round_to_nearest          =  1,
+	round_toward_infinity     =  2,
+	round_toward_neg_infinity =  3
+};
+
+enum float_denorm_style {    // hh 971227 added
+	denorm_indeterminate = -1,
+	denorm_absent        =  0,
+	denorm_present       =  1
+};
+
+template <class T>
+class numeric_limits {
+public:
+	static const bool is_specialized = false;   // hh 971227 completed class definition
+	static T min() MSIPL_THROW;
+	static T max() MSIPL_THROW;
+	static const int  digits = 0;
+	static const int  digits10 = 0;
+	static const bool is_signed = false;
+	static const bool is_integer = false;
+	static const bool is_exact = false;
+	static const int  radix = 0;
+	static T epsilon() MSIPL_THROW;
+	static T round_error() MSIPL_THROW;
+
+	static const int  min_exponent = 0;
+	static const int  min_exponent10 = 0;
+	static const int  max_exponent = 0;
+	static const int  max_exponent10 = 0;
+
+	static const bool has_infinity = false;
+	static const bool has_quiet_NaN = false;
+	static const bool has_signaling_NaN = false;
+	static const float_denorm_style has_denorm = denorm_absent;
+	static const bool has_denorm_loss = false;
+	static T infinity() MSIPL_THROW;
+	static T quiet_NaN() MSIPL_THROW;
+	static T signaling_NaN() MSIPL_THROW;
+	static T denorm_min() MSIPL_THROW;
+
+	static const bool is_iec559 = false;
+	static const bool is_bounded = false;
+	static const bool is_modulo = false;
+
+	static const bool traps = false;
+	static const bool tinyness_before = false;
+	static const float_round_style round_style = round_toward_zero;
+};
+
+#ifdef MSIPL_BOOL_BUILTIN
+
+	null_template
+	class numeric_limits <bool> {
+	public:
+		static const bool is_specialized = true;
+		static bool min() MSIPL_THROW {return false;}
+		static bool max() MSIPL_THROW {return true;}
+		static const int  digits = 1;
+		static const int  digits10 = 1;
+		static const bool is_signed = false;
+		static const bool is_integer = true;
+		static const bool is_exact = true;
+		static const int  radix = 2;
+		static bool epsilon() MSIPL_THROW {return false;}
+		static bool round_error() MSIPL_THROW {return false;}
+
+		static const int  min_exponent = 0;
+		static const int  min_exponent10 = 0;
+		static const int  max_exponent = 0;
+		static const int  max_exponent10 = 0;
+
+		static const bool has_infinity = false;
+		static const bool has_quiet_NaN = false;
+		static const bool has_signaling_NaN = false;
+		static const float_denorm_style has_denorm = denorm_absent;
+		static const bool has_denorm_loss = false;
+		static bool infinity() MSIPL_THROW {return false;}
+		static bool quiet_NaN() MSIPL_THROW {return false;}
+		static bool signaling_NaN() MSIPL_THROW {return false;}
+		static bool denorm_min() MSIPL_THROW {return true;}
+
+		static const bool is_iec559 = false;
+		static const bool is_bounded = true;
+		static const bool is_modulo = false;
+
+		static const bool traps = false;
+		static const bool tinyness_before = false;
+		static const float_round_style round_style = round_toward_zero;
+	};
+
+#endif
+
+null_template
+class numeric_limits <char> {
+public:
+	static const bool is_specialized = true;
+	static char min() MSIPL_THROW {return CHAR_MIN;}
+	static char max() MSIPL_THROW {return CHAR_MAX;}
+	static const int  digits = 7;
+	static const int  digits10 = 3;
+	static const bool is_signed = true;
+	static const bool is_integer = true;
+	static const bool is_exact = true;
+	static const int  radix = 2;
+	static char epsilon() MSIPL_THROW {return 0;}
+	static char round_error() MSIPL_THROW {return 0;}
+
+	static const int  min_exponent = 0;
+	static const int  min_exponent10 = 0;
+	static const int  max_exponent = 0;
+	static const int  max_exponent10 = 0;
+
+	static const bool has_infinity = false;
+	static const bool has_quiet_NaN = false;
+	static const bool has_signaling_NaN = false;
+	static const float_denorm_style has_denorm = denorm_absent;
+	static const bool has_denorm_loss = false;
+	static char infinity() MSIPL_THROW {return 0;}
+	static char quiet_NaN() MSIPL_THROW {return 0;}
+	static char signaling_NaN() MSIPL_THROW {return 0;}
+	static char denorm_min() MSIPL_THROW {return 1;}
+
+	static const bool is_iec559 = false;
+	static const bool is_bounded = true;
+	static const bool is_modulo = true;
+
+	static const bool traps = false;
+	static const bool tinyness_before = false;
+	static const float_round_style round_style = round_toward_zero;
+};
+
+null_template
+class numeric_limits <signed char> {
+public:
+	static const bool is_specialized = true;
+	static signed char min() MSIPL_THROW {return SCHAR_MIN;}
+	static signed char max() MSIPL_THROW {return SCHAR_MAX;}
+	static const int  digits = 7;
+	static const int  digits10 = 3;
+	static const bool is_signed = true;
+	static const bool is_integer = true;
+	static const bool is_exact = true;
+	static const int  radix = 2;
+	static signed char epsilon() MSIPL_THROW {return 0;}
+	static signed char round_error() MSIPL_THROW {return 0;}
+
+	static const int  min_exponent = 0;
+	static const int  min_exponent10 = 0;
+	static const int  max_exponent = 0;
+	static const int  max_exponent10 = 0;
+
+	static const bool has_infinity = false;
+	static const bool has_quiet_NaN = false;
+	static const bool has_signaling_NaN = false;
+	static const float_denorm_style has_denorm = denorm_absent;
+	static const bool has_denorm_loss = false;
+	static signed char infinity() MSIPL_THROW {return 0;}
+	static signed char quiet_NaN() MSIPL_THROW {return 0;}
+	static signed char signaling_NaN() MSIPL_THROW {return 0;}
+	static signed char denorm_min() MSIPL_THROW {return 1;}
+
+	static const bool is_iec559 = false;
+	static const bool is_bounded = true;
+	static const bool is_modulo = true;
+
+	static const bool traps = false;
+	static const bool tinyness_before = false;
+	static const float_round_style round_style = round_toward_zero;
+};
+
+null_template
+class numeric_limits <unsigned char> {
+public:
+	static const bool is_specialized = true;
+	static unsigned char min() MSIPL_THROW {return 0;}
+	static unsigned char max() MSIPL_THROW {return UCHAR_MAX;}
+	static const int  digits = 8;
+	static const int  digits10 = 3;
+	static const bool is_signed = false;
+	static const bool is_integer = true;
+	static const bool is_exact = true;
+	static const int  radix = 2;
+	static unsigned char epsilon() MSIPL_THROW {return 0;}
+	static unsigned char round_error() MSIPL_THROW {return 0;}
+
+	static const int  min_exponent = 0;
+	static const int  min_exponent10 = 0;
+	static const int  max_exponent = 0;
+	static const int  max_exponent10 = 0;
+
+	static const bool has_infinity = false;
+	static const bool has_quiet_NaN = false;
+	static const bool has_signaling_NaN = false;
+	static const float_denorm_style has_denorm = denorm_absent;
+	static const bool has_denorm_loss = false;
+	static unsigned char infinity() MSIPL_THROW {return 0;}
+	static unsigned char quiet_NaN() MSIPL_THROW {return 0;}
+	static unsigned char signaling_NaN() MSIPL_THROW {return 0;}
+	static unsigned char denorm_min() MSIPL_THROW {return 1;}
+
+	static const bool is_iec559 = false;
+	static const bool is_bounded = true;
+	static const bool is_modulo = true;
+
+	static const bool traps = false;
+	static const bool tinyness_before = false;
+	static const float_round_style round_style = round_toward_zero;
+};
+
+#ifdef MSIPL_WCHART
+
+	null_template
+	class numeric_limits <wchar_t> {
+	public:
+		static const bool is_specialized = true;
+		static wchar_t min() MSIPL_THROW {return WCHAR_MIN;}
+		static wchar_t max() MSIPL_THROW {return WCHAR_MAX;}
+		static const int  digits = 16;
+		static const int  digits10 = 5;
+		static const bool is_signed = false;
+		static const bool is_integer = true;
+		static const bool is_exact = true;
+		static const int  radix = 2;
+		static wchar_t epsilon() MSIPL_THROW {return 0;}
+		static wchar_t round_error() MSIPL_THROW {return 0;}
+
+		static const int  min_exponent = 0;
+		static const int  min_exponent10 = 0;
+		static const int  max_exponent = 0;
+		static const int  max_exponent10 = 0;
+
+		static const bool has_infinity = false;
+		static const bool has_quiet_NaN = false;
+		static const bool has_signaling_NaN = false;
+		static const float_denorm_style has_denorm = denorm_absent;
+		static const bool has_denorm_loss = false;
+		static wchar_t infinity() MSIPL_THROW {return 0;}
+		static wchar_t quiet_NaN() MSIPL_THROW {return 0;}
+		static wchar_t signaling_NaN() MSIPL_THROW {return 0;}
+		static wchar_t denorm_min() MSIPL_THROW {return 1;}
+
+		static const bool is_iec559 = false;
+		static const bool is_bounded = true;
+		static const bool is_modulo = true;
+
+		static const bool traps = false;
+		static const bool tinyness_before = false;
+		static const float_round_style round_style = round_toward_zero;
+	};
+
+#endif
+
+null_template
+class numeric_limits <short> {
+public:
+	static const bool is_specialized = true;
+	static short min() MSIPL_THROW {return SHRT_MIN;}
+	static short max() MSIPL_THROW {return SHRT_MAX;}
+	static const int  digits = 15;
+	static const int  digits10 = 5;
+	static const bool is_signed = true;
+	static const bool is_integer = true;
+	static const bool is_exact = true;
+	static const int  radix = 2;
+	static short epsilon() MSIPL_THROW {return 0;}
+	static short round_error() MSIPL_THROW {return 0;}
+
+	static const int  min_exponent = 0;
+	static const int  min_exponent10 = 0;
+	static const int  max_exponent = 0;
+	static const int  max_exponent10 = 0;
+
+	static const bool has_infinity = false;
+	static const bool has_quiet_NaN = false;
+	static const bool has_signaling_NaN = false;
+	static const float_denorm_style has_denorm = denorm_absent;
+	static const bool has_denorm_loss = false;
+	static short infinity() MSIPL_THROW {return 0;}
+	static short quiet_NaN() MSIPL_THROW {return 0;}
+	static short signaling_NaN() MSIPL_THROW {return 0;}
+	static short denorm_min() MSIPL_THROW {return 1;}
+
+	static const bool is_iec559 = false;
+	static const bool is_bounded = true;
+	static const bool is_modulo = true;
+
+	static const bool traps = false;
+	static const bool tinyness_before = false;
+	static const float_round_style round_style = round_toward_zero;
+};
+
+null_template
+class numeric_limits <unsigned short> {
+public:
+	static const bool is_specialized = true;
+	static unsigned short min() MSIPL_THROW {return 0;}
+	static unsigned short max() MSIPL_THROW {return USHRT_MAX;}
+	static const int  digits = 16;
+	static const int  digits10 = 5;
+	static const bool is_signed = false;
+	static const bool is_integer = true;
+	static const bool is_exact = true;
+	static const int  radix = 2;
+	static unsigned short epsilon() MSIPL_THROW {return 0;}
+	static unsigned short round_error() MSIPL_THROW {return 0;}
+
+	static const int  min_exponent = 0;
+	static const int  min_exponent10 = 0;
+	static const int  max_exponent = 0;
+	static const int  max_exponent10 = 0;
+
+	static const bool has_infinity = false;
+	static const bool has_quiet_NaN = false;
+	static const bool has_signaling_NaN = false;
+	static const float_denorm_style has_denorm = denorm_absent;
+	static const bool has_denorm_loss = false;
+	static unsigned short infinity() MSIPL_THROW {return 0;}
+	static unsigned short quiet_NaN() MSIPL_THROW {return 0;}
+	static unsigned short signaling_NaN() MSIPL_THROW {return 0;}
+	static unsigned short denorm_min() MSIPL_THROW {return 1;}
+
+	static const bool is_iec559 = false;
+	static const bool is_bounded = true;
+	static const bool is_modulo = true;
+
+	static const bool traps = false;
+	static const bool tinyness_before = false;
+	static const float_round_style round_style = round_toward_zero;
+};
+
+null_template
+class numeric_limits <int> {
+public:
+	static const bool is_specialized = true;
+	static int min() MSIPL_THROW {return INT_MIN;}
+	static int max() MSIPL_THROW {return INT_MAX;}
+	static const int  digits = 31;
+	static const int  digits10 = 10;
+	static const bool is_signed = true;
+	static const bool is_integer = true;
+	static const bool is_exact = true;
+	static const int  radix = 2;
+	static int epsilon() MSIPL_THROW {return 0;}
+	static int round_error() MSIPL_THROW {return 0;}
+
+	static const int  min_exponent = 0;
+	static const int  min_exponent10 = 0;
+	static const int  max_exponent = 0;
+	static const int  max_exponent10 = 0;
+
+	static const bool has_infinity = false;
+	static const bool has_quiet_NaN = false;
+	static const bool has_signaling_NaN = false;
+	static const float_denorm_style has_denorm = denorm_absent;
+	static const bool has_denorm_loss = false;
+	static int infinity() MSIPL_THROW {return 0;}
+	static int quiet_NaN() MSIPL_THROW {return 0;}
+	static int signaling_NaN() MSIPL_THROW {return 0;}
+	static int denorm_min() MSIPL_THROW {return 1;}
+
+	static const bool is_iec559 = false;
+	static const bool is_bounded = true;
+	static const bool is_modulo = true;
+
+	static const bool traps = false;
+	static const bool tinyness_before = false;
+	static const float_round_style round_style = round_toward_zero;
+};
+
+null_template
+class numeric_limits <unsigned int> {
+public:
+	static const bool is_specialized = true;
+	static unsigned int min() MSIPL_THROW {return 0;}
+	static unsigned int max() MSIPL_THROW {return UINT_MAX;}
+	static const int  digits = 32;
+	static const int  digits10 = 10;
+	static const bool is_signed = false;
+	static const bool is_integer = true;
+	static const bool is_exact = true;
+	static const int  radix = 2;
+	static unsigned int epsilon() MSIPL_THROW {return 0;}
+	static unsigned int round_error() MSIPL_THROW {return 0;}
+
+	static const int  min_exponent = 0;
+	static const int  min_exponent10 = 0;
+	static const int  max_exponent = 0;
+	static const int  max_exponent10 = 0;
+
+	static const bool has_infinity = false;
+	static const bool has_quiet_NaN = false;
+	static const bool has_signaling_NaN = false;
+	static const float_denorm_style has_denorm = denorm_absent;
+	static const bool has_denorm_loss = false;
+	static unsigned int infinity() MSIPL_THROW {return 0;}
+	static unsigned int quiet_NaN() MSIPL_THROW {return 0;}
+	static unsigned int signaling_NaN() MSIPL_THROW {return 0;}
+	static unsigned int denorm_min() MSIPL_THROW {return 1;}
+
+	static const bool is_iec559 = false;
+	static const bool is_bounded = true;
+	static const bool is_modulo = true;
+
+	static const bool traps = false;
+	static const bool tinyness_before = false;
+	static const float_round_style round_style = round_toward_zero;
+};
+
+null_template
+class numeric_limits <long> {
+public:
+	static const bool is_specialized = true;
+	static long min() MSIPL_THROW {return LONG_MIN;}
+	static long max() MSIPL_THROW {return LONG_MAX;}
+	static const int  digits = 31;
+	static const int  digits10 = 10;
+	static const bool is_signed = true;
+	static const bool is_integer = true;
+	static const bool is_exact = true;
+	static const int  radix = 2;
+	static long epsilon() MSIPL_THROW {return 0;}
+	static long round_error() MSIPL_THROW {return 0;}
+
+	static const int  min_exponent = 0;
+	static const int  min_exponent10 = 0;
+	static const int  max_exponent = 0;
+	static const int  max_exponent10 = 0;
+
+	static const bool has_infinity = false;
+	static const bool has_quiet_NaN = false;
+	static const bool has_signaling_NaN = false;
+	static const float_denorm_style has_denorm = denorm_absent;
+	static const bool has_denorm_loss = false;
+	static long infinity() MSIPL_THROW {return 0;}
+	static long quiet_NaN() MSIPL_THROW {return 0;}
+	static long signaling_NaN() MSIPL_THROW {return 0;}
+	static long denorm_min() MSIPL_THROW {return 1;}
+
+	static const bool is_iec559 = false;
+	static const bool is_bounded = true;
+	static const bool is_modulo = true;
+
+	static const bool traps = false;
+	static const bool tinyness_before = false;
+	static const float_round_style round_style = round_toward_zero;
+};
+
+null_template
+class numeric_limits <unsigned long> {
+public:
+	static const bool is_specialized = true;
+	static unsigned long min() MSIPL_THROW {return 0;}
+	static unsigned long max() MSIPL_THROW {return ULONG_MAX;}
+	static const int  digits = 32;
+	static const int  digits10 = 10;
+	static const bool is_signed = false;
+	static const bool is_integer = true;
+	static const bool is_exact = true;
+	static const int  radix = 2;
+	static unsigned long epsilon() MSIPL_THROW {return 0;}
+	static unsigned long round_error() MSIPL_THROW {return 0;}
+
+	static const int  min_exponent = 0;
+	static const int  min_exponent10 = 0;
+	static const int  max_exponent = 0;
+	static const int  max_exponent10 = 0;
+
+	static const bool has_infinity = false;
+	static const bool has_quiet_NaN = false;
+	static const bool has_signaling_NaN = false;
+	static const float_denorm_style has_denorm = denorm_absent;
+	static const bool has_denorm_loss = false;
+	static unsigned long infinity() MSIPL_THROW {return 0;}
+	static unsigned long quiet_NaN() MSIPL_THROW {return 0;}
+	static unsigned long signaling_NaN() MSIPL_THROW {return 0;}
+	static unsigned long denorm_min() MSIPL_THROW {return 1;}
+
+	static const bool is_iec559 = false;
+	static const bool is_bounded = true;
+	static const bool is_modulo = true;
+
+	static const bool traps = false;
+	static const bool tinyness_before = false;
+	static const float_round_style round_style = round_toward_zero;
+};
+
+#ifdef __MSL_LONGLONG_SUPPORT__
+null_template
+class numeric_limits <long long> {
+public:
+	static const bool is_specialized = true;
+	static long long min() MSIPL_THROW {return LLONG_MIN;}
+	static long long max() MSIPL_THROW {return LLONG_MAX;}
+	static const int  digits = 63;
+	static const int  digits10 = 19;
+	static const bool is_signed = true;
+	static const bool is_integer = true;
+	static const bool is_exact = true;
+	static const int  radix = 2;
+	static long long epsilon() MSIPL_THROW {return 0;}
+	static long long round_error() MSIPL_THROW {return 0;}
+
+	static const int  min_exponent = 0;
+	static const int  min_exponent10 = 0;
+	static const int  max_exponent = 0;
+	static const int  max_exponent10 = 0;
+
+	static const bool has_infinity = false;
+	static const bool has_quiet_NaN = false;
+	static const bool has_signaling_NaN = false;
+	static const float_denorm_style has_denorm = denorm_absent;
+	static const bool has_denorm_loss = false;
+	static long long infinity() MSIPL_THROW {return 0;}
+	static long long quiet_NaN() MSIPL_THROW {return 0;}
+	static long long signaling_NaN() MSIPL_THROW {return 0;}
+	static long long denorm_min() MSIPL_THROW {return 1;}
+
+	static const bool is_iec559 = false;
+	static const bool is_bounded = true;
+	static const bool is_modulo = true;
+
+	static const bool traps = false;
+	static const bool tinyness_before = false;
+	static const float_round_style round_style = round_toward_zero;
+};
+
+null_template
+class numeric_limits <unsigned long long> {
+public:
+	static const bool is_specialized = true;
+	static unsigned long long min() MSIPL_THROW {return 0;}
+	static unsigned long long max() MSIPL_THROW {return ULLONG_MAX;}
+	static const int  digits = 64;
+	static const int  digits10 = 20;
+	static const bool is_signed = false;
+	static const bool is_integer = true;
+	static const bool is_exact = true;
+	static const int  radix = 2;
+	static unsigned long long epsilon() MSIPL_THROW {return 0;}
+	static unsigned long long round_error() MSIPL_THROW {return 0;}
+
+	static const int  min_exponent = 0;
+	static const int  min_exponent10 = 0;
+	static const int  max_exponent = 0;
+	static const int  max_exponent10 = 0;
+
+	static const bool has_infinity = false;
+	static const bool has_quiet_NaN = false;
+	static const bool has_signaling_NaN = false;
+	static const float_denorm_style has_denorm = denorm_absent;
+	static const bool has_denorm_loss = false;
+	static unsigned long long infinity() MSIPL_THROW {return 0;}
+	static unsigned long long quiet_NaN() MSIPL_THROW {return 0;}
+	static unsigned long long signaling_NaN() MSIPL_THROW {return 0;}
+	static unsigned long long denorm_min() MSIPL_THROW {return 1;}
+
+	static const bool is_iec559 = false;
+	static const bool is_bounded = true;
+	static const bool is_modulo = true;
+
+	static const bool traps = false;
+	static const bool tinyness_before = false;
+	static const float_round_style round_style = round_toward_zero;
+};
+#endif /* __MSL_LONGLONG_SUPPORT__ */
+
+#ifndef _No_Floating_Point
+
+null_template
+class numeric_limits <float> {
+public:
+	static const bool is_specialized = true;
+	static float min() MSIPL_THROW {return FLT_MIN;}
+	static float max() MSIPL_THROW {return FLT_MAX;}
+	static const int  digits = FLT_MANT_DIG;
+	static const int  digits10 = FLT_DIG;
+	static const bool is_signed = true;
+	static const bool is_integer = false;
+	static const bool is_exact = false;
+	static const int  radix = FLT_RADIX;
+	static float epsilon() MSIPL_THROW {return FLT_EPSILON;}
+	static float round_error() MSIPL_THROW {return 0.5F;}
+
+	static const int  min_exponent = FLT_MIN_EXP;
+	static const int  min_exponent10 = FLT_MIN_10_EXP;
+	static const int  max_exponent = FLT_MAX_EXP;
+	static const int  max_exponent10 = FLT_MAX_10_EXP;
+
+	static const bool has_infinity = true;
+	static const bool has_quiet_NaN = true;
+	#ifdef __INTEL__
+		static const bool has_signaling_NaN = false;
+	#else
+		static const bool has_signaling_NaN = true;
+	#endif
+	static const float_denorm_style has_denorm = denorm_absent;
+	static const bool has_denorm_loss = false;
+	static float infinity() MSIPL_THROW {return HUGE_VALF;}
+	static float quiet_NaN() MSIPL_THROW {return NAN;}
+	static float signaling_NaN() MSIPL_THROW {return NAN;}
+	static float denorm_min() MSIPL_THROW {return min();}
+
+	static const bool is_iec559 = true;
+	static const bool is_bounded = true;
+	static const bool is_modulo = false;
+
+	static const bool traps = true;
+	static const bool tinyness_before = true;
+	static const float_round_style round_style = round_to_nearest;
+};
+
+null_template
+class numeric_limits <double> {
+public:
+	static const bool is_specialized = true;
+	static double min() MSIPL_THROW {return DBL_MIN;}
+	static double max() MSIPL_THROW {return DBL_MAX;}
+	static const int  digits = DBL_MANT_DIG;
+	static const int  digits10 = DBL_DIG;
+	static const bool is_signed = true;
+	static const bool is_integer = false;
+	static const bool is_exact = false;
+	static const int  radix = FLT_RADIX;
+	static double epsilon() MSIPL_THROW {return DBL_EPSILON;}
+	static double round_error() MSIPL_THROW {return 0.5;}
+
+	static const int  min_exponent = DBL_MIN_EXP;
+	static const int  min_exponent10 = DBL_MIN_10_EXP;
+	static const int  max_exponent = DBL_MAX_EXP;
+	static const int  max_exponent10 = DBL_MAX_10_EXP;
+
+	static const bool has_infinity = true;
+	static const bool has_quiet_NaN = true;
+	#ifdef __INTEL__
+		static const bool has_signaling_NaN = false;
+	#else
+		static const bool has_signaling_NaN = true;
+	#endif
+	static const float_denorm_style has_denorm = denorm_absent;
+	static const bool has_denorm_loss = false;
+	static double infinity() MSIPL_THROW {return HUGE_VAL;}
+	static double quiet_NaN() MSIPL_THROW {return NAN;}
+	static double signaling_NaN() MSIPL_THROW {return NAN;}
+	static double denorm_min() MSIPL_THROW {return min();}
+
+	static const bool is_iec559 = true;
+	static const bool is_bounded = true;
+	static const bool is_modulo = false;
+
+	static const bool traps = true;
+	static const bool tinyness_before = true;
+	static const float_round_style round_style = round_to_nearest;
+};
+
+null_template
+class numeric_limits <long double> {
+public:
+	static const bool is_specialized = true;
+	static long double min() MSIPL_THROW {return LDBL_MIN;}
+	static long double max() MSIPL_THROW {return LDBL_MAX;}
+	static const int  digits = LDBL_MANT_DIG;
+	static const int  digits10 = LDBL_DIG;
+	static const bool is_signed = true;
+	static const bool is_integer = false;
+	static const bool is_exact = false;
+	static const int  radix = FLT_RADIX;
+	static long double epsilon() MSIPL_THROW {return LDBL_EPSILON;}
+	static long double round_error() MSIPL_THROW {return 0.5L;}
+
+	static const int  min_exponent = LDBL_MIN_EXP;
+	static const int  min_exponent10 = LDBL_MIN_10_EXP;
+	static const int  max_exponent = LDBL_MAX_EXP;
+	static const int  max_exponent10 = LDBL_MAX_10_EXP;
+
+	static const bool has_infinity = true;
+	static const bool has_quiet_NaN = true;
+	#ifdef __INTEL__
+		static const bool has_signaling_NaN = false;
+	#else
+		static const bool has_signaling_NaN = true;
+	#endif
+	static const float_denorm_style has_denorm = denorm_absent;
+	static const bool has_denorm_loss = false;
+	static long double infinity() MSIPL_THROW {return HUGE_VALL;}
+	static long double quiet_NaN() MSIPL_THROW {return NAN;}
+	static long double signaling_NaN() MSIPL_THROW {return NAN;}
+	static long double denorm_min() MSIPL_THROW {return min();}
+
+	static const bool is_iec559 = true;
+	static const bool is_bounded = true;
+	static const bool is_modulo = false;
+
+	static const bool traps = true;
+	static const bool tinyness_before = true;
+	static const float_round_style round_style = round_to_nearest;
+};
+
+#endif // _No_Floating_Point
+
+#ifdef MSIPL_USING_NAMESPACE
+	} // namespace std
+#endif
+
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import reset
+#endif
+#pragma options align=reset
+
+#endif // RC_INVOKED
+
+#endif /* MSIPL_LIMIT_H */
+
+// hh 971220 fixed MOD_C_INCLUDE
+// hh 971222 added alignment wrapper
+// hh 971227 added float_denorm_style
+// hh 971227 completed class numeric_limits definition
+// hh 971227 changed file name from mlimits.h to limits
+// hh 971227 made include guards standard
+// hh 971227 corrected spelling of signaling in many places
+// hh 971230 added RC_INVOKED wrapper
+// hh 980107 Rewrite
+// hh 980408 wrapped in #ifndef _No_Floating_Point

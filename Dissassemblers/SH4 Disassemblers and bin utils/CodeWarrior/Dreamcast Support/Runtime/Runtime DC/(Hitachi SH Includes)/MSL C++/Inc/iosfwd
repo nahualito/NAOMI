@@ -1,0 +1,148 @@
+/*  Metrowerks Standard Library  Version 4.0  1998 August 10  */
+
+/*  $Date:: 3/15/98 6:10 PM                                  $ 
+ *  $Revision:: 12                                           $ 
+ *  $NoKeywords: $ 
+ *
+ *		Portions Copyright © 1995-1998 Metrowerks, Inc.
+ *		All rights reserved.
+ */
+
+/**
+ **  iosfwd             // hh 971222 Changed filename from iosfwd.h to iosfwd
+ **
+ **  Lib++  : The Modena C++ Standard Library,
+ **           Version 2.4, October 1997
+ **
+ **  Copyright (c) 1995-1997 Modena Software Inc.
+ **/
+
+#ifndef _IOSFWD            // hh 971222 Made include guards standard
+#define _IOSFWD
+
+#include <mcompile.h>
+
+#ifndef RC_INVOKED // hh 971230
+
+#pragma options align=native
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import on
+#endif
+
+#ifdef MSIPL_USING_NAMESPACE
+	namespace std {
+#endif
+
+template<class charT> struct char_traits;
+null_template struct char_traits<char>;
+template<class T> class allocator;
+
+template<class charT,class DEFTEMPARG(traits,char_traits<charT>) > 
+class basic_ios;
+
+template<class charT,class DEFTEMPARG(traits,char_traits<charT>) > 
+class basic_istream;
+
+template<class charT,class DEFTEMPARG(traits,char_traits<charT>) > 
+class basic_ostream;
+
+template<class charT,class DEFTEMPARG(traits,char_traits<charT>) > 
+class basic_iostream;
+
+template<class charT,class DEFTEMPARG(traits,char_traits<charT>) > 
+class basic_streambuf;
+
+template<class charT,class DEFTEMPARG(traits,char_traits<charT>),
+         class DEFTEMPARG(Allocator, allocator<charT>) > 
+class basic_stringbuf;
+
+template<class charT,class DEFTEMPARG(traits,char_traits<charT>) > 
+class basic_filebuf;
+
+template<class charT,class DEFTEMPARG(traits,char_traits<charT>) > 
+class basic_ifstream;
+
+template<class charT,class DEFTEMPARG(traits,char_traits<charT>) > 
+class basic_ofstream;
+
+template<class charT,class DEFTEMPARG(traits,char_traits<charT>) > 
+class basic_fstream;
+
+template<class charT,class DEFTEMPARG(traits,char_traits<charT>),
+         class DEFTEMPARG(Allocator, allocator<charT>) > 
+class basic_istringstream;
+
+template<class charT,class DEFTEMPARG(traits,char_traits<charT>),
+         class DEFTEMPARG(Allocator, allocator<charT>) > 
+class basic_ostringstream;
+
+template<class charT,class DEFTEMPARG(traits,char_traits<charT>),
+         class DEFTEMPARG(Allocator, allocator<charT>) > 
+class basic_stringstream;
+
+template<class charT,class DEFTEMPARG(traits,char_traits<charT>) > 
+class basic_istreambuf_iterator;  // CHECK
+
+template<class charT,class DEFTEMPARG(traits,char_traits<charT>) > 
+class basic_ostreambuf_iterator;  // CHECK
+
+typedef basic_ios<char,    char_traits<char> > ios;
+typedef basic_istream<char,char_traits<char> > istream; 
+typedef basic_ostream<char,char_traits<char> > ostream; 
+typedef basic_iostream<char,char_traits<char> > iostream; 
+
+typedef basic_streambuf<char,char_traits<char> > streambuf; 
+typedef basic_filebuf<char,char_traits<char> > filebuf; 
+typedef basic_stringbuf<char,char_traits<char>,allocator<char> > stringbuf; 
+
+typedef basic_ifstream<char,char_traits<char> > ifstream; 
+typedef basic_ofstream<char,char_traits<char> > ofstream; 
+typedef basic_fstream<char,char_traits<char> > fstream; 
+
+typedef basic_istringstream<char,char_traits<char>,allocator<char> > istringstream; 
+typedef basic_ostringstream<char,char_traits<char>,allocator<char> > ostringstream; 
+typedef basic_stringstream<char,char_traits<char>,allocator<char> > stringstream; 
+
+#ifdef MSIPL_WCHART
+null_template struct char_traits<wchar_t>;
+typedef basic_ios<wchar_t,char_traits<wchar_t> > wios;
+typedef basic_istream<wchar_t,char_traits<wchar_t> > wistream;
+typedef basic_ostream<wchar_t,char_traits<wchar_t> > wostream;
+typedef basic_iostream<wchar_t,char_traits<wchar_t> > wiostream;
+ 
+typedef basic_streambuf<wchar_t,char_traits<wchar_t> > wstreambuf;
+typedef basic_filebuf<wchar_t,char_traits<wchar_t> > wfilebuf;
+typedef basic_stringbuf<wchar_t,char_traits<wchar_t>,allocator<wchar_t> > wstringbuf;
+ 
+typedef basic_ifstream<wchar_t,char_traits<wchar_t> > wifstream;
+typedef basic_ofstream<wchar_t,char_traits<wchar_t> > wofstream;
+typedef basic_fstream<wchar_t,char_traits<wchar_t> > wfstream;
+ 
+typedef basic_istringstream<wchar_t,char_traits<wchar_t>,allocator<wchar_t> > wistringstream;
+typedef basic_ostringstream<wchar_t,char_traits<wchar_t>,allocator<wchar_t> > wostringstream;
+typedef basic_stringstream<wchar_t,char_traits<wchar_t>,allocator<wchar_t> > wstringstream;
+#endif
+
+template<class stateT> 
+class fpos;
+
+typedef long streamoff;
+
+#ifdef MSIPL_USING_NAMESPACE
+	} // namespace std
+#endif
+
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import reset
+#endif
+#pragma options align=reset
+
+#endif // RC_INVOKED
+
+#endif /* MSIPL_IOSFWD_H */
+
+// hh  971222 added alignment wrapper
+// hh  971222 Changed filename from iosfwd.h to iosfwd
+// hh  971222 Made include guards standard
+// hh  971230 added RC_INVOKED wrapper
+// blc 980313 fixed char_traits structness

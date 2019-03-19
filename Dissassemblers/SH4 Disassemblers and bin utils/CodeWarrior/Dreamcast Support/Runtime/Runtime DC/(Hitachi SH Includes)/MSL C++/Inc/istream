@@ -1,0 +1,1181 @@
+/*  Metrowerks Standard Library  Version 4.0  1998 August 10  */
+
+/*  $Date:: 6/18/98 12:27 PM                                 $ 
+ *  $Revision:: 12                                           $ 
+ *  $NoKeywords: $ 
+ *
+ *		Portions Copyright © 1995-1998 Metrowerks, Inc.
+ *		All rights reserved.
+ */
+
+/**
+ **  istream       // hh 971222 Changed filename from istream.h to istream
+ **
+ **  Lib++  : The Modena C++ Standard Library,
+ **           Version 2.4, October 1997
+ **
+ **  Copyright (c) 1995-1997 Modena Software Inc.
+ **/
+
+#ifndef _ISTREAM                 // hh 971222 Made include guards standard
+#define _ISTREAM
+
+#include <mcompile.h>
+
+#ifdef MSIPL_ANSI_HEADER
+#include <limits>      // hh 971220 fixed MOD_INCLUDE
+#else
+#include <mlimits.h>   // hh 971220 fixed MOD_INCLUDE
+#endif
+
+#include <iosfwd>      // hh 971220 fixed MOD_INCLUDE
+//#include <extmath.h>   // hh 971220 fixed MOD_INCLUDE  // hh 980609 commented out
+#include <streambuf>   // hh 971220 fixed MOD_INCLUDE
+
+#ifndef MSIPL_LINUX
+#include <cerrno>      // hh 971220 fixed MOD_C_INCLUDE
+#else
+#include <errno.h>
+#endif
+
+#include <ostream>     // hh 980129 added to support iostream in here
+#include <ios>
+
+#ifndef RC_INVOKED // hh 971230
+
+#pragma options align=native
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import on
+#endif
+
+#ifdef MSIPL_USING_NAMESPACE
+	namespace std {
+#endif
+
+#ifdef MSIPL_EXCEPT 
+#define IOS_TRY try {
+#define IOS_CATCH   } catch (...) { flg |= ios_base::badbit; }
+#else
+#define IOS_TRY
+#define IOS_CATCH
+#endif
+
+#define SETSTATE(flg)                           \
+     if (sb) state|=flg; else state|=iostate(flg|badbit); \
+     if (state & except) throwfailure ();
+
+#define SETSTATENON(obj, flg)                     \
+     if (obj.sb) obj.state |= flg; else obj.state |= iostate(flg|ios_base::badbit);  \
+     if (obj.state & obj.except) ios_base::throwfailure ();
+
+template<class charT, class traits>
+class basic_istream : virtual public basic_ios<charT, traits>
+{
+     typedef basic_streambuf<charT, traits> streambuf_type;
+
+public:
+     typedef num_get<charT, istreambuf_iterator<charT, traits> > facet_type;
+     typedef ctype<charT> ctype_facet;
+     typedef charT                     char_type;
+     typedef typename traits::int_type int_type;
+     typedef typename traits::pos_type pos_type;
+     typedef typename traits::off_type off_type;
+     typedef traits                    traits_type;
+
+// 27.6.1.1.1 Constructor/Destructor:
+
+     basic_istream() {}
+     explicit basic_istream (streambuf_type*  sb);
+     virtual ~basic_istream ();
+ 
+// 27.6.1.1.2 Prefix/Suffix:
+
+     class sentry 
+     {
+
+     private:
+          bool ok_;
+          typedef  ctype<char_type> ctype_facet;
+
+     public:
+		explicit sentry (basic_istream<charT, traits>& is, bool noskipws=false)
+			: ok_ (false)
+		{
+			iostate flg = goodbit;
+			IOS_TRY
+				WRITE_LOCK(is._mutex);
+				is.chcount = 0; 
+				if (!is.state)
+				{
+					if (is.tiestr) 
+						is.tiestr->flush ();
+					if (!noskipws && (is.fmtfl & skipws))
+					{
+						int ch;
+						#ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+							const ctype_facet& ct = use_facet<ctype_facet> (is.getloc());
+						#else
+							const ctype_facet& ct = use_facet (is.getloc(), (ctype_facet*)0);
+						#endif
+						while (!traits::eq_int_type (ch = is.sb->sbumpc (), 
+							traits::eof ()) && ct.is (ct.space, charT(ch)))
+							{}
+						if (!traits::eq_int_type (ch, traits::eof ())) 
+							is.sb->sputbackc (charT(ch));
+					}
+				}
+				else 
+					flg = failbit;
+			IOS_CATCH
+			SETSTATENON(is, flg) 
+			if (!is.state)
+				ok_ = true;
+		}
+          ~sentry (){};
+          operator bool () const
+          {
+               return ok_;
+          }
+
+     private:  // Not to be defined
+          sentry (const sentry&);
+          sentry& operator= (const sentry&);
+     };
+
+     friend class sentry;
+
+// 27.6.1.2 Formatted input:
+     inline basic_istream& operator>> (basic_istream& (*pf) (basic_istream&));
+     inline basic_istream& operator>> (ios_base& (*pf) (ios_base&));
+     inline basic_istream& operator>> (basic_ios<charT, traits>& (*pf)
+                  (basic_ios<charT, traits>&));
+ 
+#ifdef MSIPL_BOOL_BUILTIN
+     basic_istream& operator>> (bool& n);
+#endif
+     basic_istream& operator>> (short& n);
+     basic_istream& operator>> (unsigned short& n);
+     basic_istream& operator>> (int& n);
+     basic_istream& operator>> (unsigned int& n);
+     basic_istream& operator>> (long& n);
+     basic_istream& operator>> (unsigned long& n);
+	#ifdef __MSL_LONGLONG_SUPPORT__
+     basic_istream& operator>> (long long& n);          // hh 980107 added long long support
+     basic_istream& operator>> (unsigned long long& n); // hh 980107 added long long support
+    #endif /* __MSL_LONGLONG_SUPPORT__ */
+	#ifndef _No_Floating_Point
+     basic_istream& operator>> (float& f);
+     basic_istream& operator>> (double& f);
+     basic_istream& operator>> (long double& f);
+	#endif
+     basic_istream& operator>> (void*& p);
+     basic_istream& operator>> (streambuf_type* sb);
+ 
+// 27.6.1.3 Unformatted input:
+
+     inline streamsize gcount () const;
+     int_type get ();
+     basic_istream& get (char_type&);
+     inline basic_istream& get (char_type*, streamsize);
+     basic_istream& get (char_type*, streamsize, char_type);
+     inline basic_istream& get (streambuf_type&);
+     basic_istream& get (streambuf_type&, char_type);
+     inline basic_istream& getline (char_type*, streamsize);
+     basic_istream& getline (char_type*, streamsize, char_type);
+     basic_istream& ignore (streamsize n=1, int_type delim=traits::eof ());
+     int_type peek ();
+     basic_istream& read (char_type*, streamsize);
+     streamsize readsome (char_type*, streamsize);
+     basic_istream& putback (char_type);
+     basic_istream& unget ();
+     int sync ();
+     pos_type tellg ();
+     basic_istream& seekg (pos_type);
+     basic_istream& seekg (off_type, ios_base::seekdir);
+ 
+	// hh 980114 Moved out.  Compiler doesn't support it in template definition.
+	//           Shouldn't be inline anyway.  Updated friend template syntax
+     friend basic_istream<charT, traits>&
+     operator>> <charT, traits>(basic_istream<charT, traits>& in, charT* s);
+
+	// hh 980114 Moved out.  Compiler doesn't support it in template definition.
+	//           Shouldn't be inline anyway.  Updated friend template syntax
+     friend inline basic_istream<charT, traits>&
+     operator>> <charT, traits>(basic_istream<charT, traits>& in, charT& c);
+
+private:
+     streamsize chcount;
+
+	friend Init;
+};
+
+// 27.6.1.2.3 Character extraction templates:
+template<class charT, class traits> basic_istream<charT, traits>&  
+    ws (basic_istream<charT, traits>& is);
+
+template<class charT, class traits> basic_istream<charT, traits>&  
+     operator>> (basic_istream<charT, traits>&, charT&);
+
+template<class traits> basic_istream<char, traits>&  
+     operator>> (basic_istream<char, traits>&, unsigned char&);
+
+template<class traits> basic_istream<char, traits>&  
+     operator>> (basic_istream<char, traits>&, signed char&);
+
+template<class charT, class traits> basic_istream<charT, traits>&  
+     operator>> (basic_istream<charT, traits>&, charT*);
+
+template<class traits> basic_istream<char, traits>&  
+     operator>> (basic_istream<char, traits>&, unsigned char*);
+
+template<class traits> basic_istream<char, traits>&  
+     operator>> (basic_istream<char, traits>&, signed char*);
+
+template<class charT, class traits> 
+//inline // hh 980514
+basic_istream<charT, traits>::basic_istream (streambuf_type* sb) 
+	: chcount (0)
+{
+	init(sb);  // hh 980518 corrected initialization (thanks ms)
+}
+
+template<class charT, class traits>
+inline basic_istream<charT, traits>::~basic_istream (){}
+/*      hh 971228 moved inline because compiler doesn't support out-lined nested members
+template<class charT, class traits>
+basic_istream<charT, traits>::sentry::sentry (
+            basic_istream<charT, traits>& is, bool noskipws) : ok_ (false)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          WRITE_LOCK(is._mutex);
+          is.chcount = 0; 
+          if (!is.state)
+          {
+               if (is.tiestr) 
+                    is.tiestr->flush ();
+               if (!noskipws && (is.fmtfl & skipws))
+               {
+                    int ch;
+               #ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+                    const ctype_facet& ct = use_facet<ctype_facet> (is.getloc());
+               #else
+                    const ctype_facet& ct = use_facet (is.getloc(), (ctype_facet*)0);
+               #endif
+                    while (!traits::eq_int_type (ch = is.sb->sbumpc (), 
+                           traits::eof ()) && ct.is (ct.space, ch));
+
+                    if (!traits::eq_int_type (ch, traits::eof ())) 
+                         is.sb->sputbackc (ch);
+               }
+          }
+          else 
+               flg = failbit;
+     IOS_CATCH
+     SETSTATENON(is, flg) 
+     if (!is.state)
+          ok_ = true;
+}
+*/
+#ifdef MSIPL_BOOL_BUILTIN
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::operator>> (bool& n)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          sentry s_ (*this); 
+          WRITE_LOCK(_mutex);
+          if (s_) {
+
+          #ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+               const facet_type& ct = use_facet<facet_type> (getloc());
+          #else
+               const facet_type& ct = use_facet (getloc(), (facet_type *)0);
+          #endif
+               ct.get (*this, 0, *this, flg, n);
+          }
+     IOS_CATCH
+     SETSTATE(flg)
+     return *this;
+}
+#endif /* MSIPL_BOOL_BUILTIN */
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::operator>> (short& n)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          sentry s_ (*this);
+          WRITE_LOCK(_mutex);
+          if (s_) {
+               long tmp;
+
+          #ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+               const facet_type& ct = use_facet<facet_type> (getloc());
+          #else
+               const facet_type& ct = use_facet (getloc(), (facet_type *)0);
+          #endif
+
+               ct.get (*this, 0, *this, flg, tmp);
+               if ( (n = short(tmp)) != tmp) 
+                    flg |= failbit;
+          }
+     IOS_CATCH
+     SETSTATE(flg)
+     return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::operator>> (int& n)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this);
+          if (s_)
+          {
+               long tmp;
+          #ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+               const facet_type& ct = use_facet<facet_type> (getloc());
+          #else
+               const facet_type& ct = use_facet (getloc(), (facet_type *)0);
+          #endif
+               ct.get (*this, 0, *this, flg, tmp);
+               if ( (n = tmp) != tmp)
+                    flg |= failbit;
+          }
+     IOS_CATCH
+     SETSTATE(flg)
+     return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::operator>> (long& n)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this);
+          if (s_) 
+          {
+          #ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+               const facet_type& ct = use_facet<facet_type> (getloc());
+          #else
+               const facet_type& ct = use_facet (getloc(), (facet_type *)0);
+          #endif
+               ct.get (*this, 0, *this, flg, n);
+          }
+     IOS_CATCH
+     SETSTATE(flg)
+     return *this;
+}
+
+#ifdef __MSL_LONGLONG_SUPPORT__
+template<class charT, class traits>        // hh 980107 added long long support
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::operator>> (long long& n)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this);
+          if (s_) 
+          {
+          #ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+               const facet_type& ct = use_facet<facet_type> (getloc());
+          #else
+               const facet_type& ct = use_facet (getloc(), (facet_type *)0);
+          #endif
+               ct.get (*this, 0, *this, flg, n);
+          }
+     IOS_CATCH
+     SETSTATE(flg)
+     return *this;
+}
+#endif /* __MSL_LONGLONG_SUPPORT__ */
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::operator>> (unsigned short& n)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this);
+          if (s_) 
+          {
+          #ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+               const facet_type& ct = use_facet<facet_type> (getloc());
+          #else
+               const facet_type& ct = use_facet (getloc(), (facet_type *)0);
+          #endif
+               ct.get (*this, 0, *this, flg, n);
+          }
+     IOS_CATCH
+     SETSTATE(flg)
+     return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::operator>> (unsigned int& n)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          sentry s_ (*this);
+          WRITE_LOCK(_mutex);
+          if (s_) 
+          {
+
+          #ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+               const facet_type& ct = use_facet<facet_type> (getloc());
+          #else
+               const facet_type& ct = use_facet (getloc(), (facet_type *)0);
+          #endif
+               ct.get (*this, 0, *this, flg, n);
+          }
+     IOS_CATCH
+     SETSTATE(flg)
+     return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::operator>> (unsigned long& n)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this);
+          if (s_) 
+          {
+          #ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+               const facet_type& ct = use_facet<facet_type> (getloc());
+          #else
+               const facet_type& ct = use_facet (getloc(), (facet_type *)0);
+          #endif
+               ct.get (*this, 0, *this, flg, n);
+          }
+     IOS_CATCH
+     SETSTATE(flg)
+     return *this;
+}
+
+#ifdef __MSL_LONGLONG_SUPPORT__
+template<class charT, class traits>         // hh 980107 added long long support
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::operator>> (unsigned long long& n)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this);
+          if (s_) 
+          {
+          #ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+               const facet_type& ct = use_facet<facet_type> (getloc());
+          #else
+               const facet_type& ct = use_facet (getloc(), (facet_type *)0);
+          #endif
+               ct.get (*this, 0, *this, flg, n);
+          }
+     IOS_CATCH
+     SETSTATE(flg)
+     return *this;
+}
+#endif /* __MSL_LONGLONG_SUPPORT__ */
+
+#ifndef _No_Floating_Point
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::operator>> (float& n)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this);
+          if (s_) 
+          {
+          #ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+               const facet_type& ct = use_facet<facet_type> (getloc());
+          #else
+               const facet_type& ct = use_facet (getloc(), (facet_type *)0);
+          #endif
+               ct.get (*this, 0, *this, flg, n);
+          }
+     IOS_CATCH
+     SETSTATE(flg)
+     return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::operator>> (double& n)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          sentry s_ (*this);
+          WRITE_LOCK(_mutex);
+          if (s_) 
+          {
+          #ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+               const facet_type& ct = use_facet<facet_type> (getloc());
+          #else
+               const facet_type& ct = use_facet (getloc(), (facet_type *)0);
+          #endif
+               ct.get (*this, 0, *this, flg, n);
+          }
+     IOS_CATCH
+     SETSTATE(flg)
+     return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::operator>> (long double& n)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this);
+          if (s_) 
+          {
+          #ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+               const facet_type& ct = use_facet<facet_type> (getloc());
+          #else
+               const facet_type& ct = use_facet (getloc(), (facet_type *)0);
+          #endif
+               ct.get (*this, 0, *this, flg, n);
+          }
+     IOS_CATCH
+     SETSTATE(flg)
+     return *this;
+}
+
+#endif // _No_Floating_Point
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::operator>> (void*& n)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry  s_ (*this);
+          if (s_) {
+
+          #ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+               const facet_type& ct = use_facet<facet_type> (getloc());
+          #else
+               const facet_type& ct = use_facet (getloc(), (facet_type *)0);
+          #endif
+               ct.get (*this, 0, *this, flg, n);
+          }
+     IOS_CATCH
+     SETSTATE(flg)
+     return *this;
+}
+
+template<class charT, class traits> 
+inline basic_istream<charT, traits>& 
+basic_istream<charT, traits>::operator>> (basic_istream& (*pf) (basic_istream&))
+{
+      return (*pf) (*this);
+}
+
+template<class cT, class ts> 
+inline basic_istream<cT, ts>&
+basic_istream<cT, ts>::operator>> (basic_ios<cT, ts>& (*pf)(basic_ios<cT, ts>&))
+{
+      (*pf) (*this); 
+      return *this;
+}
+    
+template<class charT, class traits> 
+inline basic_istream<charT, traits>&
+basic_istream<charT, traits>::operator>> (ios_base& (*pf) (ios_base&))
+{
+      (*pf) (*this); 
+      return *this;
+}
+    
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::operator>> (streambuf_type* buf)
+{
+     iostate flg = goodbit;
+     int_type ch;
+     bool res = false;
+
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this);
+          if (buf && s_)
+          {
+               while (!traits::eq_int_type (ch = sb->sbumpc (), traits::eof ()))
+               {
+                    if (traits::eq_int_type (buf->sputc (traits::to_char_type (ch)), 
+                         traits::eof ())) 
+                    {
+                         sb->sputbackc (ch);
+                         break;
+                    }
+                    res = true;
+               }
+               if (traits::eq_int_type (ch, traits::eof ()))
+                    flg |= eofbit;
+          }
+          if (!res) 
+               flg |= failbit;
+     IOS_CATCH
+     SETSTATE(flg)
+     return *this;
+}
+
+// hh 980114 Moved out here.  Compiler doesn't support it in template definition.
+//           Shouldn't be inline anyway.
+template<class charT, class traits> 
+basic_istream<charT, traits>&
+operator>> (basic_istream<charT, traits>& in, charT* s)
+{
+	typedef basic_istream<charT, traits> IT;
+	charT* ssav = s;
+	ios_base::iostate flg = ios_base::goodbit;
+
+	IOS_TRY
+		WRITE_LOCK(in._mutex);
+		IT::sentry s_ (in);
+		if (s_)
+		{
+			int count = in.width () > 0 ? in.width () : numeric_limits<int>::max ();
+			int ch;
+
+			#ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+				const IT::ctype_facet& ct = use_facet<IT::ctype_facet> (in.getloc ());
+			#else
+				const IT::ctype_facet& ct = use_facet (in.getloc (), (IT::ctype_facet*)0);
+			#endif
+			for (;0 < --count;) {
+				if (ct.is (ct.space, char(ch = in.rdbuf ()->sbumpc ())))
+				{
+					in.rdbuf ()->sputbackc (char(ch));
+					break;
+				}
+				if (traits::eq_int_type (ch, traits::eof ()))
+				{
+					flg |= IT::eofbit;
+					break;
+				}
+				if (traits::eq_int_type (ch, traits::eos ())) 
+					break;
+				*ssav++ = traits::to_char_type (ch);
+			}
+		}
+	IOS_CATCH
+	in.width (0);
+	*ssav = traits::eos ();
+	if (ssav == s) flg |= IT::failbit;
+	in.setstate (flg);
+	return in;
+}
+
+// hh 980114 Moved out here.  Compiler doesn't support it in template definition.
+//           Shouldn't be inline anyway.
+template<class charT, class traits> 
+basic_istream<charT, traits>&
+operator>> (basic_istream<charT, traits>& in, charT& c)
+{
+	typedef basic_istream<charT, traits> IT;
+	ios_base::iostate flg = ios_base::goodbit;
+	IT::int_type ch;
+
+	IOS_TRY
+		WRITE_LOCK(in._mutex);
+		IT::sentry s_ (in);
+		if (s_ && !traits::eq_int_type (ch = in.rdbuf ()->sbumpc (), traits::eof ()))
+			c=traits::to_char_type (ch);
+		else 
+			flg |= ios_base::failbit;
+	IOS_CATCH
+	in.setstate (flg);
+	return in;
+}
+
+template<class charT, class traits> inline streamsize 
+basic_istream<charT, traits>::gcount () const 
+{
+     READ_LOCK(_mutex); 
+     return chcount;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>::int_type 
+basic_istream<charT, traits>::get ()
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          int_type ch;
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this, true);
+          if (s_ && !traits::eq_int_type (ch = sb->sbumpc (), traits::eof ())) 
+               return (chcount = 1, ch);
+          flg |= failbit;
+     IOS_CATCH
+     SETSTATE(flg)
+     return traits::eof ();
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::get (char_type& c)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          int_type ch;
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this, true);
+          if (s_ && !traits::eq_int_type (ch = sb->sbumpc (), traits::eof ())) 
+               c = (chcount = 1, traits::to_char_type (ch));
+          else 
+               flg |= failbit;
+     IOS_CATCH
+     SETSTATE(flg)
+     return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::get (char_type* s, streamsize n, char_type delim)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          sentry s_ (*this, true);
+          WRITE_LOCK(_mutex);
+          if (s_ && n)
+          {
+               int_type ch;
+               while (--n)
+               {
+                    if (traits::eq_int_type (ch = sb->sbumpc (), traits::eof ()))
+                    {
+                         flg |= eofbit;
+                         break;
+                    } 
+                    if (traits::to_char_type (ch) == delim) 
+                    {
+                         sb->sputbackc (charT(ch));
+                         break;
+                    }
+                    *s++ = traits::to_char_type (ch); 
+                    chcount++;
+               }
+          }
+     IOS_CATCH
+     *s = traits::eos ();
+     if (!chcount) 
+          flg |= failbit;
+     SETSTATE(flg)
+     return *this;
+}
+
+template<class charT, class traits> 
+inline basic_istream<charT, traits>&
+basic_istream<charT, traits>::get (char_type* s, streamsize n)
+{
+     return get (s, n, widen ('\n'));
+} 
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::get (streambuf_type& buf, char_type delim)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          int_type ch;
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this, true);
+          if (s_)
+          {
+               while (1)
+               {
+                    if (traits::eq_int_type (ch = sb->sbumpc (), traits::eof ()))
+                    {
+                         flg |= eofbit;
+                         break;
+                    }
+                    if (traits::eq_int_type (ch, delim) || traits::eq_int_type
+                          (buf.sputc (traits::to_char_type (ch)), traits::eof ())) 
+                    {
+                         sb->sputbackc (ch);
+                         break;
+                    }
+                    chcount++;
+               }
+          }
+     IOS_CATCH
+     if (!chcount) 
+          flg |= failbit;
+     SETSTATE(flg)
+     return *this;
+}
+
+template<class charT, class traits> 
+inline basic_istream<charT, traits>&
+basic_istream<charT, traits>::get (streambuf_type& sb)
+{
+     return get (sb, widen ('\n'));
+} 
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::getline (char_type* s, streamsize n, 
+                                       char_type delim)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this, true);
+          if (s_ && n>0)
+          {
+               int_type ch;
+               while (1)
+               {
+                    if (traits::eq_int_type (ch = sb->sbumpc (), traits::eof ()))
+                    {
+                         flg |= eofbit; 
+                         break;
+                    }
+                    if (traits::to_char_type (ch) == delim)
+                    {
+                         chcount++;
+                         break;
+                    } 
+                    if (!--n)
+                    {
+                         sb->sputbackc (charT(ch));
+                         flg |= failbit; 
+                         break;
+                    }
+                    *s++ = traits::to_char_type (ch);
+                    chcount++;
+               }
+          }
+     IOS_CATCH
+     *s = traits::eos ();
+     if (!chcount) 
+          flg |= failbit;
+     SETSTATE(flg)
+
+     return *this;
+}
+
+template<class charT, class traits> 
+inline basic_istream<charT, traits>&
+basic_istream<charT, traits>::getline (char_type* s, streamsize n)
+{
+     return getline (s, n, widen ('\n'));
+}
+
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::ignore (int n, int_type delim)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this, true);
+          if (s_)
+          {
+               int_type ch;
+               while (n-- > 0) 
+                    if (traits::eq_int_type (ch = sb->sbumpc (), traits::eof ())) 
+                    {
+                         flg |= eofbit; 
+                         break;
+                    } 
+                    else 
+                    { 
+                         ++chcount;
+                         if (ch == delim)
+                              break;
+                    }
+          }
+     IOS_CATCH
+     SETSTATE(flg) 
+     return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>::int_type 
+basic_istream<charT, traits>::peek ()
+{
+     iostate flg = goodbit;
+     int_type ch; 
+
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this, true);
+          ch = (s_ ? sb->sgetc () : traits::eof ());
+     IOS_CATCH
+     SETSTATE(flg) 
+     return ch;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::read (char_type* s, streamsize n)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this, true);
+          if (!s_ || (chcount = sb->sgetn (s, n)) != n) 
+               flg |= failbit | eofbit;
+     IOS_CATCH
+     SETSTATE(flg) 
+     return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+streamsize 
+basic_istream<charT, traits>::readsome (char_type* s, streamsize n)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this, true);
+          if (s_) {
+               if (!(chcount = sb->sgetn (s, n))) 
+                    flg |= eofbit;
+          }
+          else
+               flg |= failbit;
+     IOS_CATCH
+     SETSTATE(flg) 
+     return chcount;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::putback (char_type c)
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this, true);
+          if (!sb) 
+               flg |= badbit; 
+          else
+               if (state) 
+                    flg |= failbit; 
+               else
+                    if (traits::eq_int_type (sb->sputbackc (c), traits::eof ()))
+                         flg |= badbit;
+     IOS_CATCH
+     SETSTATE(flg) 
+     return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::unget ()
+{
+     iostate flg = goodbit;
+
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this, true);
+          if (!sb) 
+               flg |= badbit; 
+          else
+               if (state) 
+                    flg |= failbit; 
+               else
+                    if (traits::eq_int_type (sb->sungetc (), traits::eof ())) 
+                         flg |= badbit;
+     IOS_CATCH
+     SETSTATE(flg) 
+     return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+int basic_istream<charT, traits>::sync ()
+{
+     int ret = -1;
+     iostate flg = goodbit;
+
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this, true); 
+          if (sb) 
+               if (sb->pubsync () == -1) 
+                    flg |= badbit, ret = traits::eof (); 
+               else
+                    ret = 0;
+     IOS_CATCH
+     SETSTATE(flg) 
+     return ret;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>::
+pos_type basic_istream<charT, traits>::tellg ()
+{
+     sentry (*this, true); 
+     READ_LOCK(_mutex);
+     if (state&badbit || state&failbit)
+     	return -1;
+     return sb->pubseekoff (0, ios_base::cur, ios_base::in); // hh 971229 changed ? : to if because compiler doesn't support complex expression in ? :
+//     return (state&badbit || state&failbit) ? -1: 
+//               sb->pubseekoff (0, ios_base::cur, ios_base::in);
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::seekg (off_type off, ios_base::seekdir dir)
+{
+     sentry (*this, true); 
+     READ_LOCK(_mutex);
+     if (! (state & badbit) && ! (state & failbit)) 
+          sb->pubseekoff (off, dir);
+     return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+basic_istream<charT, traits>::seekg (pos_type pos)
+{
+     sentry (*this, true); 
+     READ_LOCK(_mutex);
+     if (! (state & badbit) && ! (state & failbit)) 
+          sb->pubseekpos (pos);
+     return *this;
+}
+
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_istream<charT, traits>&
+ws (basic_istream<charT, traits>& is)
+{
+     typedef basic_istream<charT, traits> IT;
+
+     ios_base::fmtflags fmtflag_sav = is.setf (ios_base::skipws);
+     IT::sentry s_ (is);
+     is.flags (fmtflag_sav);
+
+     if (traits::eq_int_type (is.rdbuf ()->sgetc (), traits::eof ()))
+          is.setstate (ios_base::eofbit);
+     return is;
+}
+
+typedef basic_istream<char, char_traits<char> > istream;
+
+#ifdef MSIPL_WCHART
+typedef basic_istream<wchar_t, char_traits<wchar_t> > wistream;
+#endif
+
+// hh 980129 moved from <iostream> per standard
+template<class charT,class traits>
+class basic_iostream
+	: public basic_istream<charT,traits>,
+	  public basic_ostream<charT,traits>
+{
+public:
+	explicit basic_iostream(basic_streambuf<charT,traits>* sb)
+		: basic_istream(sb),
+	//	  basic_ostream(sb),  // hh 980603 To keep from calling ios_base::init twice
+		  basic_ios(sb)
+	{     }
+	virtual ~basic_iostream()
+	{     }
+};
+
+#undef IOS_TRY
+#undef IOS_CATCH
+#undef SETSTATE
+#undef SETSTATENON
+
+#ifdef MSIPL_USING_NAMESPACE
+	} // namespace std 
+#endif
+
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import reset
+#endif
+#pragma options align=reset
+
+#endif // RC_INVOKED
+
+#endif /* MSIPL_ISTREAM_H */
+
+// hh 971220 fixed MOD_INCLUDE and MOD_C_INCLUDE
+// hh 971222 added wrapper for alignment
+// hh 971222 Changed filename from istream.h to istream
+// hh 971222 Made include guards standard
+// hh 971229 Moved sentry member definitions into class.  Compiler doesn't support non-inlined
+//           template nested classes.
+// hh 971229 changed ? : to if because compiler doesn't support complex expression in ? :
+// hh 971230 added RC_INVOKED wrapper
+// hh 980107 added long long support
+// hh 980129 moved iostream into here per standard, added <ostream>
+// hh 980408 wrapped up in #ifndef _No_Floating_Point
+// as 981016 bracketed long long support

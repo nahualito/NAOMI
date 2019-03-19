@@ -1,0 +1,2384 @@
+/*  Metrowerks Standard Library  Version 4.0  1998 August 10  */
+
+/*  $Date:: 6/18/98 12:28 PM                                 $ 
+ *  $Revision:: 14                                           $ 
+ *  $NoKeywords: $ 
+ *
+ *		Portions Copyright © 1995-1998 Metrowerks, Inc.
+ *		All rights reserved.
+ */
+
+/**
+ **  vector       // hh 971226 Changed filename from vector.h to vector
+ **
+ **  Lib++  : The Modena C++ Standard Library,
+ **           Version 2.4, October 1997
+ **
+ **  Copyright (c) 1995-1997 Modena Software Inc.
+ **/
+
+#ifndef _VECTOR          // hh 971226 Made include guards standard
+#define _VECTOR
+
+#include <mcompile.h>
+
+#include <memory>       // hh 971220 fixed MOD_INCLUDE
+#include <algobase.h>   // hh 971220 fixed MOD_INCLUDE
+#include <iterator>     // hh 971227 added <iterator>
+#include <string>       // hh 980111 added so vector could throw a stdexcept
+
+#ifdef MSIPL_ANSI_HEADER
+#include <stdexcept>    // hh 971220 fixed MOD_INCLUDE
+//#include <limits>       // hh 971220 fixed MOD_INCLUDE  // hh 980111 not needed
+#else
+#include <mexcept.h>    // hh 971220 fixed MOD_INCLUDE
+#include <mlimits.h>    // hh 971220 fixed MOD_INCLUDE
+#endif
+
+#ifndef RC_INVOKED // hh 971230
+
+#pragma options align=native
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import on
+#endif
+
+#ifdef MSIPL_USING_NAMESPACE
+	namespace std {
+#endif
+
+// Subclause 23.2.8 -- class vector
+
+template <class T, class DEFTEMPARG (Allocator, allocator<T>) >
+class vector {
+
+public:
+     class iterator;
+     class const_iterator;
+     friend class iterator;
+     friend class const_iterator;
+
+     typedef typename Allocator::reference        reference;
+     typedef typename Allocator::const_reference  const_reference;
+     typedef typename Allocator::size_type        size_type;
+     typedef typename Allocator::difference_type  difference_type;
+     typedef          T                           value_type;
+     typedef          Allocator                   allocator_type;
+     typedef typename Allocator::pointer          pointer;
+     typedef typename Allocator::const_pointer    const_pointer;
+     typedef reverse_iterator<const_iterator>     const_reverse_iterator;
+     typedef reverse_iterator<iterator>           reverse_iterator;
+
+     class iterator 
+          : public MSIPLSTD::iterator<random_access_iterator_tag, value_type, 
+                                      difference_type, pointer, reference>
+     {
+          friend class vector<T, Allocator>;
+          friend class const_iterator;
+
+          friend iterator operator+ (const difference_type n, 
+                                     const iterator& iter) 
+          {
+               READ_LOCK(*(iter.iter_mutex));
+               return vector<T, Allocator>::iterator(iter.p+n, 0);
+          }
+
+     protected:
+          pointer p;
+          DEC_OBJ_LOCK(*iter_mutex)
+
+          iterator (vector* v) : p (0)
+     #ifdef MSIPL_OBJECT_LOCK
+               , iter_mutex (& (v->_mutex))
+     #endif
+               {v;}  // hh 971227 warning supression
+     public:
+          iterator () : p (0)
+     #ifdef MSIPL_OBJECT_LOCK
+               , iter_mutex (0)
+     #endif
+               {}
+          iterator (pointer x, vector* v) : p (x)
+     #ifdef MSIPL_OBJECT_LOCK
+               , iter_mutex (& (v->_mutex))
+     #endif
+               {v;}  // hh 971227 warning supression
+        //  ~iterator () { }   // hh 980507 inline warning supression
+
+          reference operator* () const
+          { 
+               READ_LOCK(*iter_mutex);
+               return *p; 
+          }
+          pointer operator-> () const
+          {
+               READ_LOCK(*iter_mutex);
+               return p;
+          }
+          iterator& operator++ ()
+          {
+               WRITE_LOCK(*iter_mutex);
+               ++p;
+               return *this;
+          }
+          iterator operator++ (int)
+          {
+               WRITE_LOCK(*iter_mutex);
+               iterator tmp = *this;
+               ++p;
+               return tmp;
+          }
+          iterator& operator-- ()
+          {
+               WRITE_LOCK(*iter_mutex);
+               --p;
+               return *this;
+          }
+          iterator operator-- (int)
+          {
+               WRITE_LOCK(*iter_mutex);
+               iterator tmp = *this;
+               --p;
+               return tmp;
+          }
+          iterator& operator+= (const difference_type i)
+          {
+               WRITE_LOCK(*iter_mutex);
+               p += i;
+               return *this;
+          }
+          iterator& operator-= (const difference_type i)
+          {
+               p -= i;
+               return *this;
+          }
+          iterator operator+ (const difference_type i) const
+          {
+               return iterator(p+i, 0);
+          }
+          iterator operator- (const difference_type i) const
+          {
+               return iterator(p-i, 0);
+          }
+          difference_type operator- (const iterator& x) const
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return p - x.p; }
+          }
+          difference_type operator- (const const_iterator& x) const
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return p - x.p; }
+          }
+          reference operator[] (const difference_type i) const
+          { 
+               return *(*this + i); 
+          }
+
+          bool operator== (const iterator& x) const
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return p == x.p; }
+          }
+          bool operator== (const const_iterator& x) const
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return p == x.p; }
+          }
+          bool operator< (const iterator& x) const
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return p < x.p; }
+          }
+          bool operator< (const const_iterator& x) const
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return p < x.p; }
+          }
+
+          bool operator!= (const iterator& y) const
+          { return ! (*this == y); }
+          bool operator>  (const iterator& y) const
+          { return (y < *this); }
+          bool operator<= (const iterator& y) const
+          { return  ! (y < *this); }
+          bool operator>= (const iterator& y) const
+          { return  ! (*this < y); }
+          bool operator!= (const const_iterator& y) const
+          { return  ! (*this == y); }
+          bool operator>  (const const_iterator& y) const
+          { return  (y < *this); }
+          bool operator<= (const const_iterator& y) const
+          { return  ! (y < *this); }
+          bool operator>= (const const_iterator& y) const
+          { return  ! (*this < y); }
+     };
+
+     class const_iterator 
+          : public MSIPLSTD::iterator<random_access_iterator_tag, value_type, 
+                                      difference_type , const_pointer, const_reference>  // hh 971227 changed pointer & reference to const versions
+     {
+          friend class vector<T, Allocator>;
+          friend class vector<T, Allocator>::iterator;    // hh 971227 qualifier added to iterator
+
+          friend const_iterator operator+ (const difference_type n, 
+                                           const const_iterator& iter) 
+          { 
+               READ_LOCK(*(iter.iter_mutex));
+               return vector<T, Allocator>::const_iterator(iter.p+n, 0);
+          }
+
+     protected:
+          pointer              p;
+          DEC_OBJ_LOCK(*iter_mutex)
+
+          const_iterator (vector* v) : p (0)
+     #ifdef MSIPL_OBJECT_LOCK
+               , iter_mutex (& (v->_mutex))
+     #endif
+               {v;}  // hh 971227 warning supression
+     public:
+          const_iterator () : p (0)
+     #ifdef MSIPL_OBJECT_LOCK
+               , iter_mutex (0)
+     #endif
+               {}
+          const_iterator (pointer x, vector* v) : p (x)
+     #ifdef MSIPL_OBJECT_LOCK
+               , iter_mutex (& (v->_mutex))
+     #endif
+               {v;}  // hh 971227 warning supression
+
+          const_iterator (const vector<T, Allocator>::iterator& x) : p (x.p)      // hh 971227 qualifier added to iterator
+     #ifdef MSIPL_OBJECT_LOCK
+               , iter_mutex (x.iter_mutex)
+     #endif
+               {}
+
+      //    ~const_iterator () {}   // hh 980507 inline warning supression
+
+          const_reference operator* () const
+          { 
+               READ_LOCK(*iter_mutex); 
+               return *p;
+          }
+          const_pointer operator-> () const
+          { 
+               READ_LOCK(*iter_mutex); 
+               return p;
+          }
+          const_iterator& operator++ ()
+          {   
+               WRITE_LOCK(*iter_mutex);
+               ++p;
+               return *this;
+          }
+          const_iterator operator++ (int)
+          {
+               WRITE_LOCK(*iter_mutex);
+               const_iterator tmp = *this;
+               ++p;
+               return tmp;
+          }
+          const_iterator& operator-- ()
+          {
+               WRITE_LOCK(*iter_mutex);
+               --p;
+               return *this;
+          }
+          const_iterator operator-- (int)
+          {
+               WRITE_LOCK(*iter_mutex);
+               const_iterator tmp = *this;
+               --p;
+               return tmp;
+          }
+          const_iterator& operator+= (const difference_type i)
+          {
+               WRITE_LOCK(*iter_mutex);
+               p += i;
+               return *this;
+          }
+          const_iterator& operator-= (const difference_type i)
+          {
+               WRITE_LOCK(*iter_mutex);
+               p -= i;
+               return *this;
+          }
+          const_iterator operator+ (const difference_type i) const
+          {
+               READ_LOCK(*iter_mutex);
+               return const_iterator(p+i, 0);
+          }
+          const_iterator operator- (const difference_type i) const
+          {
+               READ_LOCK(*iter_mutex);
+               return const_iterator(p-i,0);
+          }
+          const_reference operator[] (const difference_type i) const
+          { 
+               return *(*this + i); 
+          }
+          difference_type operator- (const const_iterator& x) const
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return p - x.p; }
+          }
+          bool operator== (const const_iterator& x) const
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return p == x.p; }
+          }
+          bool operator< (const const_iterator& x) const
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return p < x.p; }
+          }
+          difference_type operator- (const vector<T, Allocator>::iterator& x) const         // hh 971227 qualifier added to iterator
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return p - x.p; }
+          }
+          bool operator== (const vector<T, Allocator>::iterator& x) const         // hh 971227 qualifier added to iterator
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return p == x.p; }
+          }
+          bool operator< (const vector<T, Allocator>::iterator& x) const         // hh 971227 qualifier added to iterator
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return p < x.p; }
+          }
+
+          bool operator!= (const vector<T, Allocator>::iterator& y) const         // hh 971227 qualifier added to iterator
+          { return ! (*this == y); }
+          bool operator>  (const vector<T, Allocator>::iterator& y) const         // hh 971227 qualifier added to iterator
+          { return (y < *this); }
+          bool operator<= (const vector<T, Allocator>::iterator& y) const         // hh 971227 qualifier added to iterator
+          { return  ! (y < *this); }
+          bool operator>= (const vector<T, Allocator>::iterator& y) const         // hh 971227 qualifier added to iterator
+          { return  ! (*this < y); }
+          bool operator!= (const const_iterator& y) const
+          { return ! (*this == y); }
+          bool operator>  (const const_iterator& y) const
+          { return (y < *this); }
+          bool operator<= (const const_iterator& y) const
+          { return  ! (y < *this); }
+          bool operator>= (const const_iterator& y) const
+          { return  ! (*this < y); }
+     };
+
+protected:
+     allocator_type           allocator_;
+     pointer                  start;
+     pointer                  finish;
+     pointer                  end_of_storage;
+     DEC_OBJ_LOCK(_mutex)
+
+     void insert_aux (pointer position, const T& x);
+
+public:
+     explicit vector (const Allocator& alloc = Allocator ());
+
+     explicit vector (size_type n, const T& value = T (),   // hh 980127 un-inlined
+                              const Allocator& alloc = Allocator ());
+
+     vector (const vector<T, Allocator>& x);   // hh 980127 un-inlined
+
+#ifdef MSIPL_MEMBER_TEMPLATE  // hh 980713 Temporarily moved into class definition to support compiler
+
+	template<class InputIterator>
+	vector (InputIterator first, InputIterator last, const Allocator& alloc = Allocator ())
+		: allocator_ (alloc),
+		start (0),
+		finish (0),
+		end_of_storage (0)
+	{
+		size_type n = distance (first, last);
+		start = allocator_.allocate (n);
+		MSIPL_TRY
+		{
+			finish = uninitialized_copy (first, last, start);
+			end_of_storage = finish;
+		}
+		MSIPL_CATCH
+		{
+			allocator_.deallocate (start, n);
+			throw;
+		}
+	}
+
+     template<class InputIterator>
+     void assign (InputIterator first, InputIterator last)
+     {
+          WRITE_LOCK(_mutex);
+          erase (begin (), end ());
+          insert (begin (), first, last);
+     }
+
+#else
+     vector (const_iterator first, const_iterator last,     // hh 980127 un-inlined
+                         const Allocator& alloc = Allocator ());
+     // DWA 980305 bug fix:  added missing function  // hh 980305 checked over
+     vector (const T* first, const T* last,
+                         const Allocator& alloc = Allocator ());
+#endif
+
+     void assign (size_type n, const T& t)
+     {
+          WRITE_LOCK(_mutex);
+          erase (begin (), end ());
+          insert (begin (), n, t);
+     }
+
+     allocator_type get_allocator () const 
+     { 
+          return allocator_; 
+     }
+
+     ~vector();  // hh 980507 uninlined
+
+     vector<T, Allocator>& operator= (const vector<T, Allocator>& x);
+     //
+     // 23.2.5.3  iterators:
+     //
+     iterator                 begin ()       
+     { READ_LOCK(_mutex); return iterator (start, this); }
+     const_iterator           begin () const 
+     { READ_LOCK(_mutex); return const_iterator (start, (vector*)this); }
+     iterator                 end ()         
+     { READ_LOCK(_mutex); return iterator (finish, this); }
+     const_iterator           end ()   const 
+     { READ_LOCK(_mutex); return const_iterator (finish, (vector*)this); }
+     reverse_iterator         rbegin () 
+     { return reverse_iterator (end ()); }
+     const_reverse_iterator   rbegin () const
+     { return const_reverse_iterator (end ()); }
+     reverse_iterator         rend () 
+     { return reverse_iterator (begin ()); }
+     const_reverse_iterator   rend () const 
+     { return const_reverse_iterator (begin ()); }
+
+     size_type size ()     const 
+     { READ_LOCK(_mutex); return size_type (finish - start);  }
+     size_type max_size () const { return allocator_.max_size (); }
+
+     void resize (size_type new_size, T c = T ()); // hh 980506 un-inlined
+
+     size_type capacity () const
+     { READ_LOCK(_mutex); return size_type (end_of_storage - start); }
+     bool empty () const
+     { READ_LOCK(_mutex); return (finish == start); }
+
+     void reserve (size_type n); // hh 980124 un-inlined
+
+     reference operator[] (size_type n) { return *(start + n); }               // hh 980111 made standard
+     const_reference operator[] (size_type n) const { return *(start + n); }   // hh 980111 made standard
+
+     const_reference at (size_type n) const
+     {
+          READ_LOCK(_mutex);
+          if (n < 0 || n >= size())      // hh 980111 made standard
+          	throw out_of_range("vector::at out of range");
+//          MSIPL_ASSERT(n < finish - start)
+          return *(start + n);
+     }
+     reference at (size_type n) 
+     {
+          READ_LOCK(_mutex);
+          if (n < 0 || n >= size())      // hh 980111 made standard
+          	throw out_of_range("vector::at out of range");
+//          MSIPL_ASSERT(n < finish - start)
+          return *(start + n);
+     }
+
+     reference         front ()        { return *begin ();     }
+     const_reference   front () const  { return *begin ();     }
+     reference         back ()         { return *(end () - 1); }
+     const_reference   back ()  const  { return *(end () - 1); }
+
+     void push_back (const T& x)
+     {
+          WRITE_LOCK(_mutex);
+          if (finish != end_of_storage) {
+               allocator_.construct (finish, x);
+               ++finish;
+          } 
+          else
+               insert_aux (finish, x);
+     }
+
+     void pop_back ()
+     {
+          WRITE_LOCK(_mutex);
+          MSIPL_ASSERT(!empty ())
+          --finish;
+          allocator_.destroy (finish); 
+     }
+
+     iterator insert (iterator position, const T& x);  // hh 980124 un-inlined
+
+#ifdef MSIPL_MEMBER_TEMPLATE  // hh 980713 Temporarily moved into class definition to support compiler
+
+	template <class InputIterator>
+	void
+	insert (iterator position, 
+	                        InputIterator first, InputIterator last)
+	{
+	     if (first == last) return;
+	     size_type n = distance (first, last);
+	     size_type n1 = distance (begin (), position);
+	     WRITE_LOCK(_mutex);
+	     MSIPL_ASSERT(n1 <= finish - start)
+	     if (end_of_storage - finish >= n) {
+	          if (finish - (start + n1) > n) {
+	               uninitialized_copy (finish - n, finish, finish);
+	               copy_backward (start + n1, finish - n, finish);
+	               copy (first, last, position);
+	          } 
+	          else {
+	               uninitialized_copy (start + n1, finish, start + n1 + n);
+	               InputIterator tmp = first;
+	               for (int i = (finish - start - n1); i > 0; i--)
+	                    ++tmp;
+	               copy (first, tmp, start+ n1);
+	               uninitialized_copy (tmp, last, finish);
+	          }
+	          finish += n;
+	     } 
+	     else {
+	          size_type len = (finish - start) + max (size_type (finish - start), n);
+	          pointer tmp = allocator_.allocate (len);
+	          pointer tmp_end = tmp;
+	          MSIPL_TRY 
+	          {
+	               tmp_end = uninitialized_copy (start, start + n1, tmp);
+	               tmp_end = uninitialized_copy (first, last, tmp_end);
+	               tmp_end = uninitialized_copy (start + n1, finish, tmp_end);
+	          } 
+	          MSIPL_CATCH
+	          {
+	               pointer i = tmp;
+	               while (i != tmp_end)
+	                    allocator_.destroy (i++);
+	               allocator_.deallocate (tmp, len);
+	               throw;
+	          }
+	          pointer i = start;
+	          while (i != finish)
+	               allocator_.destroy (i++);
+	          if (start) allocator_.deallocate (start, end_of_storage - start);
+	          start = tmp;
+	          finish = tmp_end;
+	          end_of_storage = tmp + len;
+	     }
+	}
+
+#else
+     void insert (iterator position, 
+                  const_iterator first, const_iterator last);
+     // DWA 980305 bug fix:  added missing function  // hh 980305 checked over
+     void insert (iterator position, 
+                  const T* first, const T* last);
+#endif // MSIPL_MEMBER_TEMPLATE
+
+     void insert (iterator position, size_type n, const T& x);
+
+     iterator erase (iterator position);  // hh 980124 un-inlined
+
+     iterator erase (iterator first, iterator last);  // hh 980124 un-inlined
+
+     void swap (vector<T, Allocator>& x)
+     {
+          WRITE_LOCK(_mutex);
+          { WRITE_LOCK(x._mutex);
+          MSIPLSTD::swap (start, x.start);
+          MSIPLSTD::swap (finish, x.finish);
+          MSIPLSTD::swap (end_of_storage, x.end_of_storage); }
+     }
+
+     void clear ()  
+     {
+          WRITE_LOCK(_mutex);
+          pointer i = start;
+          while (i != finish)
+               allocator_.destroy (i++);
+          finish = start;
+     }
+};
+
+// hh 980507 uninlined (compiler currently unable to inline)
+template <class T, class Allocator>
+vector<T, Allocator>::vector(const Allocator& alloc) 
+	: allocator_ (alloc),
+	  start (0),
+	  finish (0),
+	  end_of_storage (0)
+{
+}
+
+template <class T, class Allocator>
+vector<T, Allocator>::vector (size_type n, const T& value, const Allocator& alloc)
+	: allocator_ (alloc),
+	start (0),
+	finish (0),
+	end_of_storage (0)
+{
+	start = allocator_.allocate (n);
+	MSIPL_TRY
+	{
+		uninitialized_fill_n (start, n, value);
+		finish = start + n;
+		end_of_storage = finish;
+	}
+	MSIPL_CATCH
+	{
+		allocator_.deallocate (start, n);
+		throw;
+	}
+}
+
+template <class T, class Allocator>
+vector<T, Allocator>::vector (const vector<T, Allocator>& x)
+	: allocator_ (x.allocator_),
+	start (0),
+	finish (0),
+	end_of_storage (0)
+{
+	size_type n = size_type(x.finish - x.start);
+	start = allocator_.allocate (n);
+	MSIPL_TRY
+	{
+		finish = uninitialized_copy (x.start, x.finish, start);
+		end_of_storage = finish;
+	}
+	MSIPL_CATCH
+	{
+		allocator_.deallocate (start, n);
+		throw;
+	}
+}
+
+#ifndef MSIPL_MEMBER_TEMPLATE
+
+	template <class T, class Allocator>
+	vector<T, Allocator>::vector (const_iterator first, const_iterator last, const Allocator& alloc)
+		: allocator_ (alloc),
+		start (0),
+		finish (0),
+		end_of_storage (0)
+	{
+		size_type n = distance (first, last);
+		start = allocator_.allocate (n);
+		MSIPL_TRY
+		{
+			finish = uninitialized_copy ((pointer)first.p, (pointer)last.p, start);  // hh 980106 added (pointer) cast
+			end_of_storage = finish;
+		}
+		MSIPL_CATCH
+		{
+			allocator_.deallocate (start, n);
+			throw;
+		}
+	}
+
+	// DWA 980305 bug fix:  added missing function  // hh 980305 checked over
+	template <class T, class Allocator>
+	vector<T, Allocator>::vector (const T* first, const T* last, const Allocator& alloc)
+		: allocator_ (alloc),
+		start (0),
+		finish (0),
+		end_of_storage (0)
+	{
+		size_type n = distance (first, last);
+		start = allocator_.allocate (n);
+		MSIPL_TRY
+		{
+			finish = uninitialized_copy (first, last, start);
+			end_of_storage = finish;
+		}
+		MSIPL_CATCH
+		{
+			allocator_.deallocate (start, n);
+			throw;
+		}
+	}
+
+#endif
+
+template <class T, class Allocator>
+vector<T, Allocator>::~vector()
+{
+	pointer i = start;
+	while (i != finish)
+		allocator_.destroy (i++);
+	if (start) 
+		allocator_.deallocate (start, (unsigned long)(end_of_storage - start));
+}
+
+template <class T, class Allocator>
+void
+vector<T, Allocator>::resize (size_type new_size, T c)
+{
+	const size_type len = size ();
+	if (new_size > len)
+		insert (end (), new_size - len, c);
+	else if (new_size < len)
+		erase (begin () + long(new_size), end ());
+}
+
+template <class T, class Allocator>
+void
+vector<T, Allocator>::reserve (size_type n)
+{
+	WRITE_LOCK(_mutex);
+	if ((end_of_storage - start) < n) {
+		size_type old_size = finish - start;
+		pointer tmp = allocator_.allocate (n);
+		MSIPL_TRY
+		{
+			uninitialized_copy (start, finish, tmp);
+		}
+		MSIPL_CATCH
+		{
+			allocator_.deallocate (tmp, n);
+			throw;
+		}
+		pointer i = start;
+		while (i != finish)
+			allocator_.destroy (i++);
+		if (start) allocator_.deallocate (start, end_of_storage - start);
+		start = tmp;
+		finish = start + old_size;
+		end_of_storage = start + n;
+	}
+}
+
+template <class T, class Allocator>
+vector<T, Allocator>::iterator
+vector<T, Allocator>::insert (iterator position, const T& x)
+{
+	WRITE_LOCK(_mutex);
+	size_type n = position - begin ();
+	MSIPL_ASSERT(n <= finish - start)
+	if (finish != end_of_storage && position == end ()) {
+		allocator_.construct (finish, x);
+		++finish;
+	} 
+	else
+		insert_aux (start + n, x);
+	return iterator (start + n, this);
+}
+
+template <class T, class Allocator>
+vector<T, Allocator>::iterator
+vector<T, Allocator>::erase (iterator position) 
+{
+	WRITE_LOCK(_mutex);
+	size_type n = position - begin ();
+	MSIPL_ASSERT(n < finish - start)
+	if (position + 1 != end ())
+		copy (position + 1, end (), position);
+	--finish;
+	allocator_.destroy (finish);
+	return iterator (start + n, this);
+}
+
+template <class T, class Allocator>
+vector<T, Allocator>::iterator
+vector<T, Allocator>::erase (iterator first, iterator last)
+{
+	WRITE_LOCK(_mutex);
+	size_type n1 = size_type(first - begin ());
+	size_type n2 = size_type(last - begin ());
+	MSIPL_ASSERT(n1 < finish - start && n2 <= finish - start && n1 < n2)
+	pointer i = copy (start + n2, finish, start + n1);
+	while (i != finish)
+		allocator_.destroy (i++); 
+	finish = finish - (n2 - n1); 
+	return iterator (start + n1, this);
+}
+
+template <class T, class Allocator>
+inline bool 
+operator== (const vector<T, Allocator>& x, const vector<T, Allocator>& y)
+{
+     return x.size () == y.size () &&
+            equal (x.begin (), x.end (), y.begin ());
+}
+
+template <class T, class Allocator>
+inline bool 
+operator< (const vector<T, Allocator>& x, const vector<T, Allocator>& y)
+{
+     return lexicographical_compare (x.begin (), x.end (), 
+                                     y.begin (), y.end ());
+}
+
+template <class T, class Allocator>
+inline bool 
+operator!= (const vector<T, Allocator>& x, const vector<T, Allocator>& y)
+{ return ! (x == y); }
+ 
+template <class T, class Allocator>
+inline bool 
+operator>= (const vector<T, Allocator>& x, const vector<T, Allocator>& y)
+{ return ! (x < y); }
+ 
+template <class T, class Allocator>
+inline bool 
+operator> (const vector<T, Allocator>& x, const vector<T, Allocator>& y)
+{ return (y < x); }
+ 
+template <class T, class Allocator>
+inline bool 
+operator<= (const vector<T, Allocator>& x, const vector<T, Allocator>& y)
+{ return ! (y < x); }
+ 
+template <class T, class Allocator>
+//inline    // hh 980124
+vector<T, Allocator>& 
+vector<T, Allocator>::operator= (const vector<T, Allocator>& x)
+{
+     WRITE_LOCK(_mutex);
+     READ_LOCK(x._mutex);
+     if (&x == this) return *this;
+     if ((x.finish - x.start) > (end_of_storage - start)) {
+          pointer tmp = allocator_.allocate (size_t(x.finish - x.start));
+          MSIPL_TRY
+          {
+               uninitialized_copy (x.start, x.finish, tmp);
+          }
+          MSIPL_CATCH
+          {
+               allocator_.deallocate (tmp, size_t(x.finish - x.start));
+               throw;
+          } 
+          pointer i = start;
+          while (i != finish)
+               allocator_.destroy (i++);
+          if (start) allocator_.deallocate (start, size_t(end_of_storage - start));
+          start = tmp;
+          end_of_storage = start + (x.finish - x.start);
+     } 
+     else if ((finish - start) >= (x.finish - x.start)) {
+          pointer i = copy (x.start, x.finish, start);
+          while (i != finish)
+               allocator_.destroy (i++); 
+     } 
+     else {
+          copy (x.start, x.start + (finish - start), start);
+          uninitialized_copy (x.start + (finish - start), x.finish, finish);
+     }
+     finish = start + (x.finish - x.start);
+     return *this;
+}
+
+template <class T, class Allocator>
+//inline    // hh 980124
+void vector<T, Allocator>::insert_aux (pointer position, const T& x)
+{
+     if (finish != end_of_storage) {
+          allocator_.construct (finish, *(finish - 1));
+          copy_backward (position, finish - 1, finish);
+          *position = x;
+          ++finish;
+     } 
+     else {
+          size_type len = (unsigned long)((finish - start)? 2 *(finish - start) : 1);  // hh 980707 was "over optimized"
+          pointer tmp = allocator_.allocate (len);
+          pointer tmp_end = tmp;
+          MSIPL_TRY 
+          {
+               tmp_end = uninitialized_copy (start, position, tmp);
+               allocator_.construct (tmp_end, x);
+               ++tmp_end;
+               tmp_end = uninitialized_copy (position, finish, tmp_end);
+          } 
+          MSIPL_CATCH
+          {
+               pointer i = tmp;
+               while (i != tmp_end)
+                    allocator_.destroy (i++);
+               allocator_.deallocate (tmp, len);
+               throw;
+          }
+          pointer i = start;
+          while (i != finish)
+               allocator_.destroy (i++);
+          if (start) allocator_.deallocate (start, size_t(end_of_storage - start));
+          start = tmp;
+          finish = tmp_end;
+          end_of_storage = tmp + len;
+     }
+}
+
+template <class T, class Allocator>
+//inline    // hh 980124
+void vector<T, Allocator>::
+insert (iterator position, size_type n, const T& x)
+{
+     if (n == 0) return;
+     WRITE_LOCK(_mutex);
+     size_type n1 = size_type(position - begin ());
+     MSIPL_ASSERT(n1 <= finish - start)
+     if (end_of_storage - finish >= n) {
+          if (finish - (start + n1) > n) {
+               uninitialized_copy (finish - n, finish , finish);
+               copy_backward (start + n1, finish - n, finish);
+               fill (start + n1, start + n1 + n, x);
+          } 
+          else {
+               uninitialized_copy (start + n1, finish, start + n1 + n);
+               fill (start + n1, finish, x);
+               uninitialized_fill_n (finish, (start + n1 + n - finish), x);
+          }
+          finish += n;
+     } 
+     else {
+          size_type len = (finish - start) + max (size_type (finish - start), n);
+          pointer tmp = allocator_.allocate (len);
+          pointer tmp_end = tmp;
+          MSIPL_TRY
+          {
+               tmp_end = uninitialized_copy (start, start + n1, tmp);
+               uninitialized_fill_n (tmp_end, n, x);
+               tmp_end = uninitialized_copy (start + n1, finish, tmp_end + n);
+          } 
+          MSIPL_CATCH
+          {
+               pointer i = tmp;
+               while (i != tmp_end)
+                    allocator_.destroy (i++);
+               allocator_.deallocate (tmp, len);
+               throw;
+          }
+          pointer i = start;
+          while (i != finish)
+               allocator_.destroy (i++);
+          if (start) allocator_.deallocate (start, size_t(end_of_storage - start));
+          start = tmp;
+          finish = tmp_end;
+          end_of_storage = tmp + len;
+     }
+}
+
+#ifndef MSIPL_MEMBER_TEMPLATE
+
+template <class T, class Allocator>
+//inline    // hh 980124
+void vector<T, Allocator>::insert (iterator position, 
+const_iterator first, const_iterator last)
+{
+     if (first == last) return;
+     size_type n = distance (first, last);
+     size_type n1 = distance (begin (), position);
+     WRITE_LOCK(_mutex);
+     MSIPL_ASSERT(n1 <= finish - start)
+     if (end_of_storage - finish >= n) {
+          if (finish - (start + n1)  > n) {
+               uninitialized_copy (finish - n, finish, finish);
+               copy_backward (start + n1, finish - n, finish);
+               copy (first, last, position);
+          } 
+          else {
+               uninitialized_copy (start + n1, finish, start + n1 + n);
+               pointer tmp = (pointer)first.p + (finish - start - n1);  // hh 980401 finish was first.p
+               copy ((pointer)first.p, tmp, start + n1);            // hh 971227 (pointer) cast added
+               uninitialized_copy (tmp, (pointer)last.p, finish);   // hh 971227 (pointer) cast added
+          }
+          finish += n;
+     } 
+     else {
+          size_type len = (finish - start) + max (size_type (finish - start), n);
+          pointer tmp = allocator_.allocate (len);
+          pointer tmp_end = tmp;
+          MSIPL_TRY 
+          {
+               tmp_end = uninitialized_copy (start, start + n1, tmp);
+               tmp_end = uninitialized_copy ((pointer)first.p, (pointer)last.p, tmp_end);  // hh 980106 added (pointer) cast
+               tmp_end = uninitialized_copy (start + n1, finish, tmp_end);
+          } 
+          MSIPL_CATCH
+          {
+               pointer i = tmp;
+               while (i != tmp_end)
+                    allocator_.destroy (i++);
+               allocator_.deallocate (tmp, len);
+               throw;
+          }
+          pointer i = start;
+          while (i != finish)
+               allocator_.destroy (i++);
+          if (start) allocator_.deallocate (start, end_of_storage - start);
+          start = tmp;
+          finish = tmp_end;
+          end_of_storage = tmp + len;
+     }
+}
+
+// DWA 980305 bug fix:  added missing function  // hh 980305 checked over
+template <class T, class Allocator>
+void vector<T, Allocator>::insert (iterator position, 
+const T* first, const T* last)
+{
+     if (first == last) return;
+     size_type n = distance (first, last);
+     size_type n1 = distance (begin (), position);
+     WRITE_LOCK(_mutex);
+     MSIPL_ASSERT(n1 <= finish - start)
+     if (end_of_storage - finish >= n) {
+          if (finish - (start + n1)  > n) {
+               uninitialized_copy (finish - n, finish, finish);
+               copy_backward (start + n1, finish - n, finish);
+               copy (first, last, position);
+          } 
+          else {
+               uninitialized_copy (start + n1, finish, start + n1 + n);
+               const_pointer tmp = first + (finish - start - n1);  // hh 980401 finish was first
+               copy (first, tmp, start + n1);
+               uninitialized_copy (tmp, last, finish);
+          }
+          finish += n;
+     } 
+     else {
+          size_type len = (finish - start) + max (size_type (finish - start), n);
+          pointer tmp = allocator_.allocate (len);
+          pointer tmp_end = tmp;
+          MSIPL_TRY 
+          {
+               tmp_end = uninitialized_copy (start, start + n1, tmp);
+               tmp_end = uninitialized_copy (first, last, tmp_end);
+               tmp_end = uninitialized_copy (start + n1, finish, tmp_end);
+          } 
+          MSIPL_CATCH
+          {
+               pointer i = tmp;
+               while (i != tmp_end)
+                    allocator_.destroy (i++);
+               allocator_.deallocate (tmp, len);
+               throw;
+          }
+          pointer i = start;
+          while (i != finish)
+               allocator_.destroy (i++);
+          if (start) allocator_.deallocate (start, end_of_storage - start);
+          start = tmp;
+          finish = tmp_end;
+          end_of_storage = tmp + len;
+     }
+}
+#endif // MSIPL_MEMBER_TEMPLATE
+
+#ifndef CHAR_BIT
+#define CHAR_BIT 8
+#endif
+
+#define MSIPL_SIZE     sizeof (typename allocator_type::value_type)
+
+template <class DEFTEMPARG (Allocator, DefAllocator<unsigned int>) >
+class bit_vector{
+
+public:
+     class reference;
+     class iterator;
+     class const_iterator;
+     friend class iterator;
+     friend class const_iterator;
+
+     typedef bool                                 const_reference;
+     typedef typename Allocator::size_type        size_type;
+     typedef typename Allocator::difference_type  difference_type; 
+     typedef bool                                 value_type;
+     typedef Allocator                            allocator_type;
+     typedef typename Allocator::pointer          pointer; 
+     typedef typename Allocator::const_pointer    const_pointer; 
+     typedef reverse_iterator<const_iterator>     const_reverse_iterator;
+     typedef reverse_iterator<iterator>           reverse_iterator;
+     typedef bit_vector                           self; 
+
+     class reference {
+          friend class bit_vector;
+          friend class iterator;
+          friend class const_iterator;
+
+     protected:
+          unsigned char *p; 
+          unsigned char mask;
+          DEC_OBJ_LOCK(*ref_mutex)
+
+          reference () : p (0), mask (0){}
+
+     public:
+		#ifdef MSIPL_OBJECT_LOCK  // hh 980114 silienced unused arg warning
+			reference (unsigned char* x, unsigned char of, const iterator* it) 
+				: p (x),
+				mask (of),
+				ref_mutex (it->iter_mutex)
+			{}
+		#else
+			reference (unsigned char* x, unsigned char of, const iterator*) 
+				: p (x),
+				mask (of)
+			{}
+		#endif
+		#ifdef MSIPL_OBJECT_LOCK  // hh 980114 silienced unused arg warning
+			reference (unsigned char* x, unsigned char of, const const_iterator* it)
+				: p (x),
+				mask (of),
+				ref_mutex (it->iter_mutex)
+			{}
+		#else
+			reference (unsigned char* x, unsigned char of, const const_iterator*)
+				: p (x),
+				mask (of)
+			{}
+		#endif
+
+     //     ~reference (){}   // hh 980507 inline warning supression
+
+          operator bool () const 
+          {       
+               READ_LOCK(*ref_mutex);
+               return bool(*p & mask); 
+          }
+          reference& operator= (const bool x)
+          {
+               WRITE_LOCK(*ref_mutex);
+               if (x)
+                    *p |= mask;
+               else
+                    *p &= (unsigned char)~mask;
+               return *this;
+          }
+          reference& operator= (const reference& x)
+          { 
+               WRITE_LOCK(*ref_mutex); 
+               return *this = bool (x); 
+          }
+          void flip () 
+          { 
+               WRITE_LOCK(*ref_mutex); 
+               *p ^= mask; 
+          }
+     };
+
+     class iterator 
+          : public MSIPLSTD::iterator<random_access_iterator_tag, value_type, 
+                                      difference_type, pointer, reference>
+     {
+          friend class bit_vector;
+          friend class const_iterator;
+          friend class reference;
+          friend iterator operator+ (const difference_type n, 
+                                     const iterator& iter)
+          { 
+               READ_LOCK(*(iter.iter_mutex));
+               bit_vector<Allocator>::iterator tmp = iter; 
+               return tmp += n; 
+          }
+
+     protected:
+          unsigned char*        cp;
+          difference_type      offset;
+          DEC_OBJ_LOCK(*iter_mutex)
+
+		#ifdef MSIPL_OBJECT_LOCK  // hh 980114 silienced unused arg warning
+			iterator (bit_vector* bv)
+				: cp (0),
+				offset (0),
+				iter_mutex (& (bv->bv_mutex))
+			{}
+		#else
+			iterator (bit_vector*)
+				: cp (0),
+				offset (0)
+			{}
+		#endif
+
+          void bump_up ()
+          { 
+               WRITE_LOCK(*iter_mutex);
+               if (offset++ == CHAR_BIT - 1){ 
+                    offset = 0; 
+                    ++cp; 
+               } 
+          }
+          void bump_down ()
+          {      
+               WRITE_LOCK(*iter_mutex);
+               if (offset-- == 0){ 
+                    offset = CHAR_BIT - 1; 
+                    --cp; 
+               } 
+          }
+
+     public:
+          iterator ()
+               : cp (0), offset (0)
+     #ifdef MSIPL_OBJECT_LOCK
+          , iter_mutex (0)
+     #endif
+          {}
+
+		#ifdef MSIPL_OBJECT_LOCK  // hh 980114 silienced unused arg warning
+			iterator (pointer x, difference_type y, bit_vector* bv)
+				: cp ((unsigned char*) ((void*)x)),
+				offset (y),
+				iter_mutex (& (bv->bv_mutex))
+			{}
+		#else
+			iterator (pointer x, difference_type y, bit_vector*)
+				: cp ((unsigned char*) ((void*)x)),
+				offset (y)
+			{}
+		#endif
+
+        //  ~iterator () { }   // hh 980507 inline warning supression
+
+          reference operator* () const
+          {   
+               READ_LOCK(*iter_mutex);
+               return reference (cp, (unsigned char) (1U << offset), this); 
+          }
+          iterator& operator++ ()
+          {
+               WRITE_LOCK(*iter_mutex);
+               bump_up ();
+               return *this;
+          }
+          iterator operator++ (int)
+          {
+               WRITE_LOCK(*iter_mutex);
+               iterator tmp = *this;
+               bump_up ();
+               return tmp;
+          }
+          iterator& operator-- ()
+          {
+               WRITE_LOCK(*iter_mutex);
+               bump_down ();
+               return *this;
+          }
+          iterator operator-- (int)
+          {
+               WRITE_LOCK(*iter_mutex);
+               iterator tmp = *this;
+               bump_down ();
+               return tmp;
+          }
+          iterator& operator+= (const difference_type i)
+          {
+               WRITE_LOCK(*iter_mutex);
+               difference_type n = i + offset;
+               cp += n / CHAR_BIT;
+               n = n % CHAR_BIT;
+               if (n < 0) {
+                    offset = n + CHAR_BIT;
+                    --cp;
+               } 
+               else
+                    offset = n;
+               return *this;
+          }
+          iterator& operator-= (const difference_type i)
+          {
+               *this += -i;
+               return *this;
+          }
+          iterator operator+ (const difference_type i) const
+          {
+               iterator tmp = *this;
+               return tmp += i;
+          }
+          iterator operator- (const difference_type i) const
+          {
+               iterator tmp = *this;
+               return tmp -= i;
+          }
+          reference operator[] (const difference_type i) const
+          { return *(*this + i); }
+
+          difference_type operator- (const iterator& x) const
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return CHAR_BIT *(cp - x.cp) + offset - x.offset; }
+          }
+          bool operator== (const iterator& x) const
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return cp == x.cp && offset == x.offset; }
+          }
+          bool operator< (const iterator& x) const
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return cp < x.cp || (cp == x.cp && offset < x.offset); }
+          }
+          difference_type operator- (const const_iterator& x) const
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return CHAR_BIT *(cp - x.cp) + offset - x.offset; }
+          }
+          bool operator== (const const_iterator& x) const
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return cp == x.cp && offset == x.offset; }
+          }
+          bool operator< (const const_iterator& x) const
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return cp < x.cp || (cp == x.cp && offset < x.offset); }
+          }
+          bool operator!= (const iterator& y) const
+          { return ! (*this == y); }
+          bool operator>  (const iterator& y) const
+          { return y < *this; }
+          bool operator<= (const iterator& y) const
+          { return  ! (y < *this); }
+          bool operator>= (const iterator& y) const
+          { return  ! (*this < y); }
+          bool operator!= (const const_iterator& y) const
+          { return ! (*this == y); }
+          bool operator>  (const const_iterator& y) const
+          { return y < *this; }
+          bool operator<= (const const_iterator& y) const
+          { return  ! (y < *this); }
+          bool operator>= (const const_iterator& y) const
+          { return  ! (*this < y); }
+     };
+
+     class const_iterator 
+          : public MSIPLSTD::iterator<random_access_iterator_tag, value_type, 
+                                      difference_type , const_pointer, const_reference>  // hh 980114 changed pointer & reference to const versions
+     {
+          friend class bit_vector;
+          friend class bit_vector<Allocator>::iterator;    // hh 980114 qualifier added to iterator
+        //  friend class reference;  // hh 980114 not wanted
+
+          friend const_iterator operator+ (const difference_type n, 
+                                           const const_iterator& iter)
+          { 
+               READ_LOCK(*(iter.iter_mutex));
+               bit_vector<Allocator>::const_iterator tmp = iter; 
+               return tmp += n; 
+          }
+
+     protected:
+          unsigned char *      cp;
+          difference_type      offset;
+          DEC_OBJ_LOCK(*iter_mutex)
+
+		#ifdef MSIPL_OBJECT_LOCK  // hh 980114 silienced unused arg warning
+			const_iterator (bit_vector* bv)
+				: cp (0),
+				offset (0),
+				iter_mutex (& (bv->bv_mutex))
+			{}
+		#else
+			const_iterator (bit_vector*)
+				: cp (0),
+				offset (0)
+			{}
+		#endif
+
+          void bump_up ()
+          {
+               READ_LOCK(*iter_mutex);
+               if (offset++ == CHAR_BIT - 1)
+               {
+                    offset = 0;
+                    ++cp;
+               }
+          }
+          void bump_down ()
+          {
+               READ_LOCK(*iter_mutex);
+               if (offset-- == 0)
+               {
+                    offset = CHAR_BIT - 1;
+                    --cp;
+               }
+          }
+
+     public:
+          const_iterator () : cp (0), offset (0)
+     #ifdef MSIPL_OBJECT_LOCK
+                 , iter_mutex (0)
+     #endif
+          {}
+		#ifdef MSIPL_OBJECT_LOCK  // hh 980114 silienced unused arg warning
+			const_iterator (pointer x, difference_type y, bit_vector* bv)
+				: cp ((unsigned char*) ((void*)x)),
+				offset (y),
+				iter_mutex (& (bv->bv_mutex))
+			{}
+		#else
+			const_iterator (pointer x, difference_type y, bit_vector*)
+				: cp ((unsigned char*) ((void*)x)),
+				offset (y)
+			{}
+		#endif
+
+          const_iterator (const bit_vector<Allocator>::iterator& x)   // hh 980114 qualifier added to iterator
+               : cp (x.cp), offset (x.offset)
+     #ifdef MSIPL_OBJECT_LOCK
+                 , iter_mutex (x.iter_mutex)
+     #endif
+          {}
+
+       //   ~const_iterator () {}   // hh 980507 inline warning supression
+
+          const const_reference operator*() const  // hh 980114 changed return from reference
+          {
+               READ_LOCK(*iter_mutex);
+               return bit_vector<Allocator>::reference (  // hh 980114 qualified reference
+                      cp, (unsigned char) (1U << offset), this);
+          }
+          const_iterator& operator++ ()
+          {
+               WRITE_LOCK(*iter_mutex);
+               bump_up ();
+               return *this;
+          }
+          const_iterator operator++ (int)
+          {
+               WRITE_LOCK(*iter_mutex);
+               const_iterator tmp = *this;
+               bump_up ();
+               return tmp;
+          }
+          const_iterator& operator-- ()
+          {
+               WRITE_LOCK(*iter_mutex);
+               bump_down ();
+               return *this;
+          }
+          const_iterator operator-- (int)
+          {
+               WRITE_LOCK(*iter_mutex);
+               const_iterator tmp = *this;
+               bump_down ();
+               return tmp;
+          }
+          const_iterator& operator+= (const difference_type i)
+          {
+               WRITE_LOCK(*iter_mutex);
+               difference_type n = i + offset;
+               cp += n / CHAR_BIT;
+               n = n % CHAR_BIT;
+               if (n < 0) {
+                    offset = n + CHAR_BIT;
+                    --cp;
+               } 
+               else
+                    offset = n;
+               return *this;
+          }
+          const_iterator& operator-= (const difference_type i)
+          {
+               WRITE_LOCK(*iter_mutex);
+               *this += -i;
+               return *this;
+          }
+          const_iterator operator+ (const difference_type i) const
+          {
+               READ_LOCK(*iter_mutex);
+               const_iterator tmp = *this;
+               return tmp += i;
+          }
+          const_iterator operator- (const difference_type i) const
+          {
+               READ_LOCK(*iter_mutex);
+               const_iterator tmp = *this;
+               return tmp -= i;
+          }
+          const_reference operator[] (const difference_type i) const  // hh 980114 changed return type from const reference
+          { 
+               return *(*this + i); 
+          }
+          difference_type operator- (const const_iterator& x) const
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return CHAR_BIT *(cp - x.cp) + offset - x.offset; }
+          }
+          bool operator== (const const_iterator& x) const
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return cp == x.cp && offset == x.offset; }
+          }
+          bool operator< (const const_iterator& x) const
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return cp < x.cp || (cp == x.cp && offset < x.offset); }
+          }
+          difference_type operator- (const bit_vector<Allocator>::iterator& x) const   // hh 980114 qualifier added to iterator
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return CHAR_BIT *(cp - x.cp) + offset - x.offset; }
+          }
+          bool operator== (const bit_vector<Allocator>::iterator& x) const   // hh 980114 qualifier added to iterator
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return cp == x.cp && offset == x.offset; }
+          }
+          bool operator< (const bit_vector<Allocator>::iterator& x) const   // hh 980114 qualifier added to iterator
+          {
+               READ_LOCK(*iter_mutex);
+               { READ_LOCK(*(x.iter_mutex));
+               return cp < x.cp || (cp == x.cp && offset < x.offset); }
+          }
+          bool operator!= (const bit_vector<Allocator>::iterator& y) const   // hh 980114 qualifier added to iterator
+          { return ! (*this == y); }
+          bool operator>  (const bit_vector<Allocator>::iterator& y) const   // hh 980114 qualifier added to iterator
+          { return y < *this; }
+          bool operator<= (const bit_vector<Allocator>::iterator& y) const   // hh 980114 qualifier added to iterator
+          { return  ! (y < *this); }
+          bool operator>= (const bit_vector<Allocator>::iterator& y) const   // hh 980114 qualifier added to iterator
+          { return  ! (*this < y); }
+          bool operator!= (const const_iterator& y) const
+          { return ! (*this == y); }
+          bool operator>  (const const_iterator& y) const
+          { return y < *this; }
+          bool operator<= (const const_iterator& y) const
+          { return  ! (y < *this); }
+          bool operator>= (const const_iterator& y) const
+          { return  ! (*this < y); }
+     };
+
+protected:
+     allocator_type                 allocator_;
+     iterator                       start;
+     iterator                       finish;
+     iterator                       end_of_storage;
+     DEC_OBJ_LOCK(bv_mutex)
+
+     size_type get_size (size_type n)
+     {
+          return (n + CHAR_BIT * MSIPL_SIZE - 1) / (CHAR_BIT * MSIPL_SIZE);
+     }
+
+     pointer bit_alloc (size_type n)
+     { 
+          return allocator_.allocate (get_size (n)); 
+     }
+
+     void initialize (size_type n)
+     {
+          pointer      q = bit_alloc (n);
+          start          = iterator (q, 0, this);
+          finish         = start + long(n);
+          end_of_storage = start + long(MSIPL_SIZE * CHAR_BIT * get_size (n));
+     }
+
+     void insert_aux (iterator position, bool x);   // hh 980124 un-inlined
+
+public:
+     iterator          begin ()       
+     { READ_LOCK(bv_mutex); return start;  }
+     const_iterator    begin () const 
+     { READ_LOCK(bv_mutex); return const_iterator (start); }
+     iterator          end ()         
+     { READ_LOCK(bv_mutex); return finish; }
+     const_iterator    end ()   const 
+     { READ_LOCK(bv_mutex); return const_iterator (finish); }
+
+     reverse_iterator  rbegin ()      
+     { return reverse_iterator (end ()); }
+     const_reverse_iterator rbegin () const
+     { return const_reverse_iterator (end ()); }
+     reverse_iterator rend () 
+     { return reverse_iterator (begin ()); }
+     const_reverse_iterator rend () const
+     { return const_reverse_iterator (begin ()); }
+
+     size_type size () const 
+     { READ_LOCK(bv_mutex); return size_type (end () - begin ());  }
+
+     size_type max_size () const 
+     { return allocator_.max_size (); }
+
+     void resize (size_type new_size, bool c = false)
+     {
+          const size_type len = finish - start;
+          if (new_size > len)
+               insert (finish, new_size - len, c);
+          else if (new_size < len)
+               erase (start + new_size, finish);
+     }
+
+     size_type capacity () const
+     {
+          READ_LOCK(bv_mutex); 
+          return (size_type) (end_of_storage - start);
+     }
+
+     bool empty () const { READ_LOCK(bv_mutex); return begin () == end (); }
+
+     reference       operator[] (size_type n)       { return at (n); }
+     const_reference operator[] (size_type n) const { return at (n); }
+
+     const_reference at (size_type n) const
+     {
+          READ_LOCK(bv_mutex); 
+          MSIPL_ASSERT(n < finish - start)
+          return *(start + n);
+     }
+
+     reference at (size_type n) 
+     {
+          READ_LOCK(bv_mutex); 
+          MSIPL_ASSERT(n < finish - start)
+          return *(start + n);
+     }
+
+     explicit bit_vector (const allocator_type& alloc = allocator_type ())
+          : allocator_ (alloc), start (this), finish (this), 
+            end_of_storage (this)
+          {}
+
+     explicit bit_vector (size_type n, const bool& value = bool (), 
+                          const allocator_type& alloc = allocator_type ())
+          : allocator_ (alloc), start (this), finish (this), 
+            end_of_storage (this)
+     {
+          initialize (n);
+          fill (start, finish, value);
+     }
+
+     bit_vector (const self& x) 
+          : allocator_ (x.allocator_), start (this), finish (this), 
+            end_of_storage (this)
+     {
+          initialize (x.size ());
+          copy (x.begin (), x.end (), start);
+     }
+
+#ifdef MSIPL_MEMBER_TEMPLATE  // hh 980713 Temporarily moved into class definition to support compiler
+     template<class InputIterator>
+     bit_vector (InputIterator first, InputIterator last, 
+                 const allocator_type& alloc = allocator_type ())
+          : allocator_ (alloc), start (this), finish (this), 
+            end_of_storage (this)
+     {
+          size_type n = distance (first, last);
+          initialize (n);
+          copy (first, last, start);
+     }
+
+     template<class InputIterator>
+     void assign (InputIterator first, InputIterator last)
+     {
+          WRITE_LOCK(bv_mutex); 
+          erase (start, finish);
+          insert (start, first, last);
+     }
+
+
+	template<class InputIterator>
+	void
+	insert (iterator position, InputIterator first, InputIterator last)
+	{
+		if (first == last) return;
+		size_type n = distance (first, last);
+		WRITE_LOCK(bv_mutex);
+		if (end_of_storage - finish >= n) {
+			copy_backward (position, finish, finish + n);
+			copy (first, last, position);
+			finish += n;
+		} 
+		else {
+			size_type len = (finish - start) + max (size_type (finish - start), n);
+			pointer q = bit_alloc (len);
+			iterator i = copy (start, position, iterator (q, 0, this));
+			i = copy (first, last, i);
+			finish = copy (position, finish, i);
+			allocator_.deallocate (pointer ((void *)start.cp), (end_of_storage.cp - start.cp)/MSIPL_SIZE);
+			start = iterator (q, 0, this);
+			end_of_storage = start + MSIPL_SIZE * CHAR_BIT * get_size (len);
+		}
+	}
+
+#else
+     bit_vector (const_iterator first, const_iterator last, 
+                    const allocator_type& alloc = allocator_type ())
+          : allocator_ (alloc), start (this), finish (this), 
+            end_of_storage (this)
+     {
+          size_type n = 0;
+          n = distance (first, last);
+          initialize (n);
+          copy (first, last, start);
+     }
+
+     bit_vector (const bool* first, const bool* last, 
+     const allocator_type& alloc = allocator_type ())
+          : allocator_ (alloc), start (this), finish (this), 
+            end_of_storage (this)
+     {
+          size_type n = 0;
+          n = distance (first, last);
+          initialize (n);
+          copy (first, last, start);
+     }
+
+     void assign (const_iterator first, const_iterator last)
+     {
+          WRITE_LOCK(bv_mutex); 
+          erase (start, finish);
+          insert (start, first, last);
+     }
+
+     // DWA 980305 bug fix:  added missing function  // hh 980305 checked over
+     void assign (const bool* first, const bool* last)
+     {
+          WRITE_LOCK(bv_mutex); 
+          erase (start, finish);
+          insert (start, first, last);
+     }
+
+     void insert (iterator position, const_iterator first, const_iterator last); // hh 980124 un-inlined
+     // DWA 980305 bug fix:  added missing function  // hh 980305 checked over
+     void insert (iterator position, const bool* first, const bool* last);
+
+#endif // MSIPL_MEMBER_TEMPLATE
+
+     allocator_type get_allocator () const
+     {
+          READ_LOCK(bv_mutex);
+          return allocator_;
+     }
+
+     void assign (size_type n, const bool& t)
+     {
+          WRITE_LOCK(bv_mutex); 
+          erase (start, finish);
+          insert (start, n, t);
+     }
+
+     ~bit_vector () 
+     { 
+          if (start.cp) 
+               allocator_.deallocate (pointer ((void *)start.cp), (end_of_storage.cp - start.cp)/MSIPL_SIZE); 
+     }
+
+     self& operator= (const self& x);  // hh 980124 un-inlined
+
+     void reserve (size_type n);  // hh 980124 un-inlined
+
+     reference       front ()       { return *begin ();      }
+     const_reference front () const { return *begin ();      }
+     reference       back ()        { return *(end () - 1); }
+     const_reference back ()  const { return *(end () - 1); }
+
+     void push_back (const bool& x)
+     {
+          WRITE_LOCK(bv_mutex);
+          if (finish != end_of_storage)
+               *finish++ = x;
+          else
+               insert_aux (finish, x);
+     }
+
+     void swap (self& x)
+     {
+          WRITE_LOCK(bv_mutex);
+          { WRITE_LOCK(x.bv_mutex);
+          MSIPLSTD::swap (start, x.start);
+          MSIPLSTD::swap (finish, x.finish);
+          MSIPLSTD::swap (allocator_, x.allocator_);
+          MSIPLSTD::swap (end_of_storage, x.end_of_storage); }
+     }
+
+     iterator insert (iterator position, const bool& x)
+     {
+          WRITE_LOCK(bv_mutex);
+          size_type n = position - start;
+          if (finish != end_of_storage && position == finish)
+               *finish++ = x;
+          else
+               insert_aux (position, x);
+          return start + n;
+     }
+
+     void insert (iterator position, size_type n, const bool& x);  // hh 980124 un-inlined
+
+     void pop_back () 
+     { 
+          WRITE_LOCK(bv_mutex); 
+          --finish; 
+     }
+
+     iterator erase (iterator position)
+     {
+          WRITE_LOCK(bv_mutex);
+          size_type n = position - start;
+          MSIPL_ASSERT(n <= finish - start)
+          if (position + 1 != finish)
+               copy (position + 1, finish, position);
+          --finish;
+          return start + n;
+     }
+
+     iterator erase (iterator first, iterator last)
+     {
+          WRITE_LOCK(bv_mutex);
+          size_type n1 = first - start;
+          size_type n2 = last - start;
+          MSIPL_ASSERT(n1 <= finish - start && n2 <= finish - start && n1 < n2)
+          copy (start + n2, finish, start + n1);
+          finish = finish - (n2 - n1);
+          return start + n1;
+     }
+
+     void clear () { erase (start, finish); }
+
+     static void swap (reference x, reference y)
+     { bool tmp = x; x = y; y = tmp; }
+
+     void flip ()
+     {
+          WRITE_LOCK(bv_mutex);
+          for (iterator i = start; i != finish; ++i)
+               (*i).flip ();
+     }
+};
+
+template <class Allocator>
+void
+bit_vector<Allocator>::insert_aux (iterator position, bool x)
+{
+	if (finish != end_of_storage) {
+		copy_backward (position, finish - 1, finish);
+		*position = x;
+		++finish; 
+	} 
+	else {
+		size_type len = size () ? 2 * size () : CHAR_BIT;
+		pointer q = bit_alloc (len);
+		iterator i = copy (begin (), position, iterator (q, 0, this));
+		*i++ = x;
+		finish = copy (position, end (), i);
+		allocator_.deallocate (pointer ((void *)start.cp), (end_of_storage.cp - start.cp)/MSIPL_SIZE);
+		start = iterator (q, 0, this);
+		end_of_storage = start + MSIPL_SIZE * CHAR_BIT * get_size (len); 
+	}
+}
+
+#ifndef MSIPL_MEMBER_TEMPLATE
+
+	template <class Allocator>
+	void
+	bit_vector<Allocator>::insert (iterator position, const_iterator first, const_iterator last)
+	{
+		if (first == last) return;
+		size_type n = 0;
+		n = distance (first, last);
+		WRITE_LOCK(bv_mutex);
+		if (end_of_storage - finish >= n) {
+			copy_backward (position, finish, finish + n);
+			copy (first, last, position);
+			finish += n;
+		} 
+		else {
+			size_type len = (finish - start) + max (size_type (finish - start), n);
+			pointer q = bit_alloc (len);
+			iterator i = copy (start, position, iterator (q, 0, this));
+			i = copy (first, last, i);
+			finish = copy (position, end (), i);
+			allocator_.deallocate (pointer ((void *)start.cp), (end_of_storage.cp - start.cp)/MSIPL_SIZE);
+			start = iterator (q, 0, this);
+			end_of_storage = start + MSIPL_SIZE * CHAR_BIT * get_size (len); 
+		}
+	}
+
+	// DWA 980305 bug fix:  added missing function  // hh 980305 checked over
+	template <class Allocator>
+	void
+	bit_vector<Allocator>::insert (iterator position, const bool* first, const bool* last)
+	{
+		if (first == last) return;
+		size_type n = 0;
+		n = distance (first, last);
+		WRITE_LOCK(bv_mutex);
+		if (end_of_storage - finish >= n) {
+			copy_backward (position, finish, finish + n);
+			copy (first, last, position);
+			finish += n;
+		} 
+		else {
+			size_type len = (finish - start) + max (size_type (finish - start), n);
+			pointer q = bit_alloc (len);
+			iterator i = copy (start, position, iterator (q, 0, this));
+			i = copy (first, last, i);
+			finish = copy (position, end (), i);
+			allocator_.deallocate (pointer ((void *)start.cp), (end_of_storage.cp - start.cp)/MSIPL_SIZE);
+			start = iterator (q, 0, this);
+			end_of_storage = start + MSIPL_SIZE * CHAR_BIT * get_size (len); 
+		}
+	}
+
+#endif // MSIPL_MEMBER_TEMPLATE
+
+template <class Allocator>
+bit_vector<Allocator>&
+bit_vector<Allocator>::operator= (const bit_vector<Allocator>& x)
+{
+	WRITE_LOCK(bv_mutex); 
+	if (&x == this) return *this;
+	if (x.size () > (end_of_storage - start)) {
+		allocator_.deallocate (pointer ((void *)start.cp), (end_of_storage.cp - start.cp)/MSIPL_SIZE);
+		initialize (x.size ());
+	}
+	copy (x.begin (), x.end (), begin ());
+	finish = begin () + x.size ();
+	return *this;
+}
+
+template <class Allocator>
+void
+bit_vector<Allocator>::reserve (size_type n)
+{
+	if (capacity () < n) {
+		WRITE_LOCK(bv_mutex);
+		pointer q = bit_alloc (n);
+		finish = copy (start, finish, iterator (q, 0, this));
+		allocator_.deallocate (pointer ((void *)start.cp), (end_of_storage.cp - start.cp)/MSIPL_SIZE);
+		start = iterator (q, 0, this);
+		end_of_storage = start + MSIPL_SIZE * CHAR_BIT * get_size (n); 
+	}
+}
+
+template <class Allocator>
+void
+bit_vector<Allocator>::insert (iterator position, size_type n, const bool& x)
+{
+	if (n == 0) return;
+	WRITE_LOCK(bv_mutex);
+	if (end_of_storage - finish >= n) {
+		copy_backward (position, finish, finish + n);
+		fill (position, position + n, x);
+		finish += n; 
+	} 
+	else {
+		size_type len = (finish - start) + max (size_type (finish - start), n);
+		pointer q = bit_alloc (len);
+		iterator i = copy (start, position, iterator (q, 0, this));
+		fill_n (i, n, x);
+		finish = copy (position, finish, i + n);
+		allocator_.deallocate (pointer ((void *)start.cp), (end_of_storage.cp - start.cp) / MSIPL_SIZE);
+		start = iterator (q, 0, this);
+		end_of_storage = start + MSIPL_SIZE * CHAR_BIT * get_size (n); 
+	}
+}
+
+template <class Allocator>
+inline bool
+operator== (const bit_vector<Allocator>& x, const bit_vector<Allocator>& y)
+{
+     return x.size () == y.size () &&
+               equal (x.begin (), x.end (), y.begin ());
+}
+
+template <class Allocator>
+inline bool
+operator< (const bit_vector<Allocator>& x, const bit_vector<Allocator>& y)
+{
+     return lexicographical_compare (x.begin (), x.end (), 
+                                     y.begin (), y.end ());
+}
+
+template <class Allocator>
+inline bool
+operator!= (const bit_vector<Allocator>& x, const bit_vector<Allocator>& y)
+{ return ! (x == y); }
+ 
+template <class Allocator>
+inline bool
+operator>  (const bit_vector<Allocator>& x, const bit_vector<Allocator>& y)
+{ return  (y < x); }
+ 
+template <class Allocator>
+inline bool
+operator<= (const bit_vector<Allocator>& x, const bit_vector<Allocator>& y)
+{ return ! (y < x); }
+ 
+template <class Allocator>
+inline bool
+operator>= (const bit_vector<Allocator>& x, const bit_vector<Allocator>& y)
+{ return ! (x < y); }
+
+#ifdef MSIPL_BOOL_BUILTIN
+#ifdef MSIPL_PARTIAL_SPECIALIZATION
+template <class Allocator>
+class vector<bool, Allocator> : public bit_vector<Allocator> {
+
+     typedef bit_vector<Allocator>                      bvec_type;
+
+public:
+     typedef typename bvec_type::reference              reference;
+     typedef typename bvec_type::const_reference        const_reference;
+     typedef typename bvec_type::iterator               iterator;
+     typedef typename bvec_type::const_iterator         const_iterator;
+     typedef typename bvec_type::size_type              size_type;
+     typedef typename bvec_type::difference_type        difference_type;
+     typedef typename bvec_type::value_type             value_type;
+     typedef typename bvec_type::allocator_type         allocator_type;
+     typedef typename bvec_type::pointer                pointer;
+     typedef typename bvec_type::const_pointer          const_pointer;
+     typedef typename bvec_type::const_reverse_iterator const_reverse_iterator;
+     typedef typename bvec_type::reverse_iterator       reverse_iterator;
+     typedef typename bvec_type::self                   self;
+
+     explicit vector (const allocator_type& alloc = allocator_type ())
+          : bvec_type (alloc) { }
+
+     explicit vector (size_type n, const bool& value = bool (), 
+                      const allocator_type& alloc = allocator_type ())
+          : bvec_type (n, value, alloc) { }
+
+     vector (const self& x) : bvec_type (x) { }
+
+#ifdef MSIPL_MEMBER_TEMPLATE
+     template<class InputIterator>
+     vector (InputIterator first, InputIterator last, 
+             const allocator_type& alloc = allocator_type ())
+          : bvec_type (first, last, alloc) { }
+
+#else
+     vector (const_iterator first, const_iterator last, 
+             const allocator_type& alloc = allocator_type ())
+          : bvec_type (first, last, alloc) { }
+     // DWA 980305 bug fix:  added missing function  // hh 980305 checked over
+     vector (const bool* first, const bool* last, 
+             const allocator_type& alloc = allocator_type ())
+          : bvec_type (first, last, alloc) { }
+#endif // MSIPL_MEMBER_TEMPLATE
+
+  //   ~vector () { }   // hh 980507 inline warning supression
+};
+
+#else
+
+null_template 
+class vector<bool, DefAllocator<unsigned int> >
+     : public bit_vector<DefAllocator<unsigned int> >{
+
+     typedef bit_vector<DefAllocator<unsigned int> > bvec_type;
+
+public:
+     typedef typename bvec_type::reference              reference;
+     typedef typename bvec_type::const_reference        const_reference;
+     typedef typename bvec_type::iterator               iterator;
+     typedef typename bvec_type::const_iterator         const_iterator;
+     typedef typename bvec_type::size_type              size_type;
+     typedef typename bvec_type::difference_type        difference_type;
+     typedef typename bvec_type::value_type             value_type;
+     typedef typename bvec_type::allocator_type         allocator_type;
+     typedef typename bvec_type::pointer                pointer;
+     typedef typename bvec_type::const_pointer          const_pointer;
+     typedef typename bvec_type::const_reverse_iterator const_reverse_iterator;
+     typedef typename bvec_type::reverse_iterator       reverse_iterator;
+     typedef typename bvec_type::self                   self;
+
+     explicit vector (const allocator_type& alloc = allocator_type ())
+          : bvec_type (alloc) { }
+
+     explicit vector (size_type n, const bool& value = bool (), 
+                      const allocator_type& alloc = allocator_type ())
+          : bvec_type (n, value, alloc) { }
+
+     vector (const self& x) : bvec_type (x) { }
+
+#ifdef MSIPL_MEMBER_TEMPLATE
+     template<class InputIterator>
+     vector (InputIterator first, InputIterator last, 
+             const allocator_type& alloc = allocator_type ())
+          : bvec_type (first, last, alloc) { }
+
+#else
+     vector (const_iterator first, const_iterator last, 
+             const allocator_type& alloc = allocator_type ())
+          : bvec_type (first, last, alloc) { }
+     // DWA 980305 bug fix:  added missing function  // hh 980305 checked over
+     vector (const bool* first, const bool* last, 
+             const allocator_type& alloc = allocator_type ())
+          : bvec_type (first, last, alloc) { }
+#endif // MSIPL_MEMBER_TEMPLATE
+
+   //  ~vector () { }   // hh 980507 inline warning supression
+};
+
+null_template 
+inline bool 
+operator== (const vector<bool, DefAllocator<unsigned int> >& x, 
+            const vector<bool, DefAllocator<unsigned int> >& y)
+{
+     return x.size () == y.size () &&
+               equal (x.begin (), x.end (), y.begin ());
+}
+
+null_template 
+inline bool 
+operator< (const vector<bool, DefAllocator<unsigned int> >& x, 
+           const vector<bool, DefAllocator<unsigned int> >& y)
+{
+     return lexicographical_compare (x.begin (), x.end (), 
+                                     y.begin (), y.end ());
+}
+
+null_template 
+class vector<bool, DefAllocator<int> >
+     : public bit_vector<DefAllocator<int> >{
+
+     typedef bit_vector<DefAllocator<int> > bvec_type;
+
+public:
+     typedef typename bvec_type::reference              reference;
+     typedef typename bvec_type::const_reference        const_reference;
+     typedef typename bvec_type::iterator               iterator;
+     typedef typename bvec_type::const_iterator         const_iterator;
+     typedef typename bvec_type::size_type              size_type;
+     typedef typename bvec_type::difference_type        difference_type;
+     typedef typename bvec_type::value_type             value_type;
+     typedef typename bvec_type::allocator_type         allocator_type;
+     typedef typename bvec_type::pointer                pointer;
+     typedef typename bvec_type::const_pointer          const_pointer;
+     typedef typename bvec_type::const_reverse_iterator const_reverse_iterator;
+     typedef typename bvec_type::reverse_iterator       reverse_iterator;
+     typedef typename bvec_type::self                   self;
+
+     explicit vector (const allocator_type& alloc = allocator_type ())
+          : bvec_type (alloc) { }
+
+     explicit vector (size_type n, const bool& value = bool (), 
+                      const allocator_type& alloc = allocator_type ())
+          : bvec_type (n, value, alloc) { }
+
+     vector (const self& x) : bvec_type (x) { }
+
+#ifdef MSIPL_MEMBER_TEMPLATE
+     template<class InputIterator>
+     vector (InputIterator first, InputIterator last, 
+             const allocator_type& alloc = allocator_type ())
+          : bvec_type (first, last, alloc) { }
+
+#else
+     vector (const_iterator first, const_iterator last, 
+             const allocator_type& alloc = allocator_type ())
+          : bvec_type (first, last, alloc) { }
+     // DWA 980305 bug fix:  added missing function  // hh 980305 checked over
+     vector (const bool* first, const bool* last, 
+             const allocator_type& alloc = allocator_type ())
+          : bvec_type (first, last, alloc) { }
+#endif // MSIPL_MEMBER_TEMPLATE
+
+   //  ~vector () { }   // hh 980507 inline warning supression
+};
+
+null_template 
+inline bool 
+operator== (const vector<bool, DefAllocator<int> >& x, 
+                 const vector<bool, DefAllocator<int> >& y)
+{
+     return x.size () == y.size () &&
+               equal (x.begin (), x.end (), y.begin ());
+}
+
+null_template 
+inline bool  
+operator< (const vector<bool, DefAllocator<int> >& x, 
+                const vector<bool, DefAllocator<int> >& y)
+{
+     return lexicographical_compare (x.begin (), x.end (), 
+                                     y.begin (), y.end ());
+}
+
+null_template 
+class vector< bool, DefAllocator<unsigned long> > 
+     : public bit_vector<DefAllocator<unsigned long> > {
+
+     typedef bit_vector<DefAllocator<unsigned long> >   bvec_type;
+
+public:
+     typedef typename bvec_type::reference              reference;
+     typedef typename bvec_type::const_reference        const_reference;
+     typedef typename bvec_type::iterator               iterator;
+     typedef typename bvec_type::const_iterator         const_iterator;
+     typedef typename bvec_type::size_type              size_type;
+     typedef typename bvec_type::difference_type        difference_type;
+     typedef typename bvec_type::value_type             value_type;
+     typedef typename bvec_type::allocator_type         allocator_type;
+     typedef typename bvec_type::pointer                pointer;
+     typedef typename bvec_type::const_pointer          const_pointer;
+     typedef typename bvec_type::const_reverse_iterator const_reverse_iterator;
+     typedef typename bvec_type::reverse_iterator       reverse_iterator;
+     typedef typename bvec_type::self                   self;
+
+     explicit vector (const allocator_type& alloc = allocator_type ())
+          : bvec_type (alloc) { }
+
+     explicit vector (size_type n, const bool& value = bool (), 
+                      const allocator_type& alloc = allocator_type ())
+          : bvec_type (n, value, alloc) { }
+
+     vector (const self& x) : bvec_type (x) { }
+
+#ifdef MSIPL_MEMBER_TEMPLATE
+     template<class InputIterator>
+     vector (InputIterator first, InputIterator last, 
+               const allocator_type& alloc = allocator_type ())
+          : bvec_type (first, last, alloc) { }
+#else
+     vector (const_iterator first, const_iterator last, 
+             const allocator_type& alloc = allocator_type ())
+          : bvec_type (first, last, alloc) { }
+     // DWA 980305 bug fix:  added missing function  // hh 980305 checked over
+     vector (const bool* first, const bool* last, 
+             const allocator_type& alloc = allocator_type ())
+          : bvec_type (first, last, alloc) { }
+#endif // MSIPL_MEMBER_TEMPLATE
+
+   //  ~vector () { }   // hh 980507 inline warning supression
+};
+
+null_template 
+inline bool
+operator== (const vector<bool, DefAllocator<unsigned long> >& x, 
+            const vector<bool, DefAllocator<unsigned long> >& y)
+{
+     return x.size () == y.size () &&
+               equal (x.begin (), x.end (), y.begin ());
+}
+
+null_template 
+inline bool
+operator< (const vector<bool, DefAllocator<unsigned long> >& x, 
+           const vector<bool, DefAllocator<unsigned long> >& y)
+{
+     return lexicographical_compare (x.begin (), x.end (), 
+                                     y.begin (), y.end ());
+}
+
+null_template 
+class vector< bool, DefAllocator<long> >
+     : public bit_vector<DefAllocator<long> > {
+
+     typedef bit_vector<DefAllocator<long> >            bvec_type;
+
+public:
+     typedef typename bvec_type::reference              reference;
+     typedef typename bvec_type::const_reference        const_reference;
+     typedef typename bvec_type::iterator               iterator;
+     typedef typename bvec_type::const_iterator         const_iterator;
+     typedef typename bvec_type::size_type              size_type;
+     typedef typename bvec_type::difference_type        difference_type;
+     typedef typename bvec_type::value_type             value_type;
+     typedef typename bvec_type::allocator_type         allocator_type;
+     typedef typename bvec_type::pointer                pointer;
+     typedef typename bvec_type::const_pointer          const_pointer;
+     typedef typename bvec_type::const_reverse_iterator const_reverse_iterator;
+     typedef typename bvec_type::reverse_iterator       reverse_iterator;
+     typedef typename bvec_type::self                   self;
+
+     explicit vector (const allocator_type& alloc = allocator_type ())
+          : bvec_type (alloc) { }
+
+     explicit vector (size_type n, const bool& value = bool (), 
+                      const allocator_type& alloc = allocator_type ())
+          : bvec_type (n, value, alloc) { }
+
+     vector (const self& x) : bvec_type (x) { }
+
+#ifdef MSIPL_MEMBER_TEMPLATE
+     template<class InputIterator>
+     vector (InputIterator first, InputIterator last, 
+             const allocator_type& alloc = allocator_type ())
+          : bvec_type (first, last, alloc) { }
+#else
+     vector (const_iterator first, const_iterator last, 
+             const allocator_type& alloc = allocator_type ())
+          : bvec_type (first, last, alloc) { }
+     // DWA 980305 bug fix:  added missing function  // hh 980305 checked over
+     vector (const bool* first, const bool* last, 
+             const allocator_type& alloc = allocator_type ())
+          : bvec_type (first, last, alloc) { }
+#endif // MSIPL_MEMBER_TEMPLATE
+
+  //   ~vector () { }   // hh 980507 inline warning supression
+};
+
+null_template 
+inline bool
+operator== (const vector<bool, DefAllocator<long> >& x, 
+            const vector<bool, DefAllocator<long> >& y)
+{
+     return x.size () == y.size () &&
+               equal (x.begin (), x.end (), y.begin ());
+}
+
+null_template 
+inline bool 
+operator< (const vector<bool, DefAllocator<long> >& x, 
+           const vector<bool, DefAllocator<long> >& y)
+{
+     return lexicographical_compare (x.begin (), x.end (), 
+                                     y.begin (), y.end ());
+}
+
+#endif
+
+#endif // MSIPL_BOOL_BUILTIN
+
+#undef MSIPL_SIZE
+
+#ifdef MSIPL_USING_NAMESPACE
+	} // namespace std 
+#endif
+
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import reset
+#endif
+#pragma options align=reset
+
+#endif // RC_INVOKED
+
+#endif // MSIPL_VECTOR_H
+
+// hh 971220 fixed MOD_INCLUDE
+// hh 971226 Changed filename from vector.h to vector
+// hh 971226 Made include guards standard
+// hh 971226 added alignment wrapper
+// hh 971227 vector<bool> not working, commented out
+// hh 971227 changed pointer & reference to const versions in const_iterator base class
+// hh 971230 added RC_INVOKED wrapper
+// hh 980106 added (pointer) cast in vector constructor and insert
+// hh 980111 <string> added so vector could throw a stdexcept
+// hh 980111 made at and operator[] standard compliant
+// hh 980111 <limits> not needed
+// DWA 980305 added better support for constructors with iterators,
+//            but without member templates. // hh 980305 checked over
+// hh 980401 Fixed a couple of crashers in insert
+// hh 980707 new length was not being correctly calculated in insert_aux.
+// hh 980713 Temporarily moved member templates into class definition to support compiler

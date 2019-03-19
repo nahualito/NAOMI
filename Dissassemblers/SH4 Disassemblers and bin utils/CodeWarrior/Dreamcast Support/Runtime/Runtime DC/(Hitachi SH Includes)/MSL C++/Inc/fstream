@@ -1,0 +1,595 @@
+/*  Metrowerks Standard Library  Version 4.0  1998 August 10  */
+
+/*  $Date:: 6/18/98 12:26 PM                                 $ 
+ *  $Revision:: 12                                           $ 
+ *  $NoKeywords: $ 
+ *
+ *		Portions Copyright © 1995-1998 Metrowerks, Inc.
+ *		All rights reserved.
+ */
+
+/**
+ **  fstream               // hh 971221 Changed filename from fstream.h to fstream
+ **
+ **  Lib++  : The Modena C++ Standard Library,
+ **           Version 2.4, October 1997
+ **
+ **  Copyright (c) 1995-1997 Modena Software Inc.
+ **/
+
+#ifndef _FSTREAM           // hh 971221 Made include guards standard
+#define _FSTREAM
+
+#include <mcompile.h>
+#include <istream>    // hh 971220 fixed MOD_INCLUDE  // hh 980129 changed from iostream
+
+#ifndef RC_INVOKED // hh 971230
+
+#pragma options align=native
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import on
+#endif
+
+#ifdef MSIPL_USING_NAMESPACE
+	namespace std {
+#endif
+
+template<class charT, class traits>
+class basic_filebuf : public basic_streambuf<charT, traits>
+{
+     typedef codecvt_base::result result;
+
+public:
+     typedef charT                     char_type;
+     typedef typename traits::pos_type pos_type;
+     typedef typename traits::off_type off_type;
+     typedef typename traits::int_type int_type;
+     typedef traits                    traits_type;
+     typedef typename traits::state_type state_type;
+
+     typedef basic_filebuf<charT, traits>     filebuf_type;
+     typedef codecvt<charT, char, state_type> ofacet_type;
+     typedef codecvt<char, charT, state_type> ifacet_type;
+
+     basic_filebuf ();
+     basic_filebuf (FILE* pfile_arg);
+     virtual ~basic_filebuf ();
+     bool is_open () const;
+     filebuf_type* open (const char* s, ios_base::openmode mode);
+     filebuf_type* close ();
+ 
+protected:
+     virtual int_type overflow (int_type c=traits::eof ());
+     virtual int_type pbackfail (int_type c=traits::eof ());
+     virtual int_type underflow ();
+     virtual pos_type seekoff (off_type off, ios_base::seekdir way, 
+              ios_base::openmode which=ios_base::in|ios_base::out);
+     virtual pos_type seekpos (pos_type sp, ios_base::openmode which=
+              ios_base::in|ios_base::out);
+     virtual basic_streambuf<charT, traits>* setbuf (char_type* s, streamsize n);
+     virtual int sync ();
+     virtual int_type uflow ();
+     virtual void imbue (const locale& loc);
+     virtual streamsize showmanyc ();
+     virtual streamsize xsgetn (char_type* s, streamsize n);
+     virtual streamsize xsputn (const char_type* s, streamsize n);
+ 
+private:
+     FILE* pfile; 
+     ios_base::openmode mode_;
+};
+
+template<class charT, class traits>
+class basic_ifstream:public basic_istream<charT, traits>
+{
+     typedef basic_filebuf<charT, traits> filebuf_type;
+
+public:
+     typedef charT                     char_type;
+     typedef typename traits::pos_type pos_type;
+     typedef typename traits::off_type off_type;
+     typedef typename traits::int_type int_type;
+     typedef traits                    traits_type;
+ 
+     basic_ifstream ();
+     explicit basic_ifstream (const char*, ios_base::openmode mode=ios_base::in);
+
+     virtual ~basic_ifstream ();
+
+     filebuf_type* rdbuf () const;
+     inline bool is_open ();
+     inline void open (const char* s, ios_base::openmode mode=ios_base::in);
+     inline void close ();
+
+private:
+     filebuf_type fbuf;
+};
+
+template<class charT, class traits>
+class basic_ofstream:public basic_ostream<charT, traits>
+{
+     typedef basic_filebuf<charT, traits> filebuf_type;
+
+public:
+     typedef charT                     char_type;
+     typedef typename traits::pos_type pos_type;
+     typedef typename traits::off_type off_type;
+     typedef typename traits::int_type int_type;
+     typedef traits                    traits_type;
+
+     basic_ofstream ();
+     explicit basic_ofstream (const char*, ios_base::openmode mode=
+                              ios_base::out|ios_base::trunc);
+ 
+     virtual ~basic_ofstream ();
+
+     filebuf_type* rdbuf () const;
+     inline bool is_open ();
+     inline void open (const char* s, ios_base::openmode mode= 
+                       ios_base::out|ios_base::trunc);
+     inline void close ();
+
+private:
+     filebuf_type fbuf;
+};
+
+template<class charT, class traits> 
+inline basic_filebuf<charT, traits>::basic_filebuf ()
+     : basic_streambuf<charT, traits> (), pfile (0)
+{ }
+
+// Not given in the draft
+
+template<class charT, class traits> 
+inline basic_filebuf<charT, traits>::basic_filebuf (FILE* pfarg)
+     : basic_streambuf<charT, traits> (), pfile (pfarg)
+{ }
+
+template<class charT, class traits> 
+inline basic_filebuf<charT, traits>::~basic_filebuf ()
+{
+     close ();
+}
+
+template<class charT, class traits> 
+inline bool
+basic_filebuf<charT, traits>::is_open () const 
+{
+     READ_LOCK(_mutex);
+     return bool(pfile);  // hh 980108 added explicit bool cast in case it is typedefed to int
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_filebuf<charT, traits>::filebuf_type* 
+basic_filebuf<charT, traits>::open (const char* s, ios_base::openmode mode) 
+{
+     if (pfile) 
+          return 0;
+     const ios_base::openmode valid_modes[]=
+     {
+          ios_base::out, 
+          ios_base::out | ios_base::app, 
+          ios_base::out | ios_base::trunc, 
+          ios_base::in, 
+          ios_base::in  | ios_base::out, 
+          ios_base::in  | ios_base::out    | ios_base::trunc, 
+          ios_base::out | ios_base::binary, 
+          ios_base::out | ios_base::app    | ios_base::binary, 
+          ios_base::out | ios_base::trunc  | ios_base::binary, 
+          ios_base::in  | ios_base::binary, 
+          ios_base::in  | ios_base::out    | ios_base::binary, 
+          ios_base::in  | ios_base::out    | ios_base::trunc | ios_base::binary, 0 
+     };
+     const char* char_modes[]={ "w", "a", "w", "r", "r+", "w+", "wb", "ab", 
+                                "wb", "rb", "r+b", "w+b", 0 };
+     int ind=0;
+     while (valid_modes[ind] && valid_modes[ind] != (mode&~ios_base::ate))
+          ++ind;
+     if (!char_modes[ind]) 
+          return 0;
+     WRITE_LOCK(_mutex);
+     mode_=mode;
+     if ((pfile = fopen (s, char_modes[ind])) != 0)   // hh 971229 warning suppression
+          if (mode&ios_base::ate && fseek (pfile, 0, SEEK_END)) 
+               close ();
+         else 
+               return this;
+     return 0;
+}
+
+template<class charT, class traits> 
+// inline  // hh 980508 uninlined
+basic_filebuf<charT, traits>::filebuf_type* 
+basic_filebuf<charT, traits>::close ()
+{
+     if (pfile==stdin || pfile==stdout || pfile==stderr) 
+          return this;
+     WRITE_LOCK(_mutex);
+     return (pfile && !fclose (pfile)) ? pfile=0, this : 0;
+}
+
+template<class charT, class traits> 
+inline int 
+basic_filebuf<charT, traits>:: sync ()
+{
+     return (pfile ? fflush (pfile) : 0);
+}
+
+template<class charT, class traits> 
+inline basic_streambuf<charT, traits>*
+basic_filebuf<charT, traits>::setbuf (char_type*, streamsize)  // hh 971229 deleted unused arguments
+{
+     return (!pfile) ? 0 : this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980124
+basic_filebuf<charT, traits>::int_type 
+basic_filebuf<charT, traits>::overflow (int_type c)
+{
+#ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG      
+     const ofacet_type& ft=use_facet<ofacet_type> (loc);
+#else
+     const ofacet_type& ft=use_facet (loc, (ofacet_type*)0);
+#endif
+     char_type ch=traits_type::to_char_type (c);
+     if (!pfile)
+          return traits_type::eof ();
+     if (traits_type::eq_int_type (c, traits::eof ()))
+          return traits_type::not_eof (c);
+     if (ft.always_noconv ())
+          return fputc (ch, pfile)==EOF ? traits::eof () : c;
+     {
+          state_type fst;
+          const char_type* end;
+          char buf [4];
+          char* ebuf;
+          result conv;
+          if ((conv=ft.out (fst, &ch, &ch+1, end, buf, buf+3, ebuf))==
+                        codecvt_base::noconv)
+               return fputc (ch, pfile)==EOF ? traits::eof () : c;
+          if ((conv==codecvt_base::partial)|| (conv==codecvt_base::error))
+               return traits::eof ();
+          *ebuf=0;
+          return fputs (buf, pfile)==EOF ? traits_type::eof () : c;
+     }
+}
+
+template<class charT, class traits> 
+inline basic_filebuf<charT, traits>::int_type 
+basic_filebuf<charT, traits>::underflow ()
+{
+     int_type value;
+     return (pfile && (value=ungetc (fgetc (pfile), pfile))!=EOF) ? value:
+                                                         traits_type::eof ();
+}
+
+template<class charT, class traits> 
+//inline  // hh 980124
+streamsize
+basic_filebuf<charT, traits>::xsputn (const char_type* s, streamsize n)
+{
+#ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+     const ofacet_type& ft=use_facet<ofacet_type> (loc);
+#else
+     const ofacet_type& ft=use_facet (loc, (ofacet_type*)0);
+#endif
+     if (!pfile || !n) 
+          return 0;
+     if (ft.always_noconv ())
+          return (streamsize)fwrite (s, sizeof (char), size_t(n), pfile);
+     {
+          state_type fst;
+          const char_type* end;
+          char buf [8];
+          char* ebuf;
+          int ret_val;
+          result conv;
+#ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG      
+          if ((conv=use_facet<ofacet_type> (loc).
+               out (fst, s, s+n, end, buf, buf+7, ebuf))==codecvt_base::noconv)
+#else
+          if ((conv=use_facet (loc, (ofacet_type*)0).
+               out (fst, s, s+n, end, buf, buf+7, ebuf))==codecvt_base::noconv)
+#endif
+               return (streamsize)fwrite (s, sizeof (char), size_t(n), pfile);
+          if ((conv==codecvt_base::partial) || (conv==codecvt_base::error)) 
+               return 0;
+          *ebuf=0;
+          return (ret_val=fputs (buf, pfile))==EOF ? 0 : streamsize(ret_val/sizeof (char_type));
+     }
+}
+
+template<class charT, class traits> 
+inline basic_filebuf<charT, traits>::int_type 
+basic_filebuf<charT, traits>::pbackfail (int_type c)
+{
+     if (!traits::eq_int_type (c, traits_type::eof ()))
+         return (pfile&&ungetc (c, pfile)!=EOF)? c : traits_type::eof ();
+     return (fseek (pfile, -1, SEEK_CUR))?traits_type::eof ():traits::not_eof (c);
+}
+
+template<class charT, class traits> 
+inline basic_filebuf<charT, traits>::int_type 
+basic_filebuf<charT, traits>::uflow ()
+{
+     int_type value;
+     if (pfile && (value=fgetc (pfile))!=EOF)
+          return value;
+     return traits_type::eof ();
+}
+
+template<class charT, class traits> 
+inline streamsize
+basic_filebuf<charT, traits>::xsgetn (char_type* s, streamsize n)
+{
+     return pfile? (streamsize)fread (s, sizeof (char), size_t(n), pfile): 0;
+}
+
+template<class charT, class traits> 
+inline void 
+basic_filebuf<charT, traits>::imbue (const locale& loc_arg)
+{
+     loc = loc_arg;
+}
+
+template<class charT, class traits> 
+inline streamsize
+basic_filebuf<charT, traits>::showmanyc ()
+{
+     long int curpos=ftell (pfile);
+     if (curpos==-1) 
+          return -1;
+     fseek (pfile, 0, SEEK_END);
+     long int endpos = ftell (pfile);
+     if (endpos==-1) 
+          return -1;
+     fseek (pfile, curpos, SEEK_SET);
+     return (streamsize (endpos-curpos));
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_filebuf<charT, traits>::pos_type
+basic_filebuf<charT, traits>::seekoff (off_type  off, 
+         ios_base::seekdir way, ios_base::openmode /* which */)
+{
+     if (!pfile|| (way&ios_base::beg) && (off<0) || (way&ios_base::end) && (off>0))
+         return pos_type (-1);
+     int  poseek = SEEK_CUR;
+     switch (way)
+     {
+         case ios_base::beg : poseek=SEEK_SET; 
+                              break;
+         case ios_base::end : poseek=SEEK_END; 
+                              break;
+     }
+     if (fseek (pfile, off, poseek)) 
+          return pos_type (-1);
+     return pos_type (ftell (pfile));
+}
+
+template<class charT, class traits> 
+basic_filebuf<charT, traits>::pos_type
+basic_filebuf<charT, traits>::seekpos (pos_type sp, ios_base::openmode)
+{
+	if (!pfile || sp==pos_type (-1) || fseek (pfile, sp.offset (), SEEK_SET))
+		return -1;
+	return ftell(pfile);
+}
+
+template<class charT, class traits> 
+inline basic_ifstream<charT, traits>::basic_ifstream ()
+     : basic_istream<charT, traits> (&fbuf)
+{
+//    init (&fbuf);  // hh 980603 already inited
+}
+
+template<class charT, class traits> 
+inline basic_ifstream<charT, traits>::basic_ifstream (const char* s, 
+                                                      ios_base::openmode mode)
+     : basic_istream<charT, traits> (&fbuf)
+{
+//    init (&fbuf);  // hh 980603 already inited
+    if (!fbuf.open (s, openmode(mode|in))) 
+       setstate (failbit);
+}
+
+template<class charT, class traits> 
+inline basic_ifstream<charT, traits>::~basic_ifstream ()
+{ }
+
+template<class charT, class traits> 
+inline basic_ifstream<charT, traits>::filebuf_type* 
+basic_ifstream<charT, traits>::rdbuf () const 
+{
+    return (filebuf_type*)&fbuf;
+}
+
+template<class charT, class traits> 
+inline bool 
+basic_ifstream<charT, traits>:: is_open ()
+{ 
+    return fbuf.is_open ();
+}
+
+template<class charT, class traits> 
+inline void 
+basic_ifstream<charT, traits>::open (const char* s, ios_base::openmode mode)
+{
+    if (!fbuf.open (s, openmode(mode|in))) 
+        setstate (failbit);
+}
+
+template<class charT, class traits> 
+inline void 
+basic_ifstream<charT, traits>::close ()
+{
+    if (!fbuf.close ()) 
+        setstate (failbit);
+}
+
+template<class charT, class traits>
+inline basic_ofstream<charT, traits>::basic_ofstream ()
+     : basic_ostream<charT, traits> (&fbuf)
+{
+//    init (&fbuf);  // hh 980603 already inited
+}
+
+template<class charT, class traits> 
+// inline  // hh 980508 uninlined
+basic_ofstream<charT, traits>::basic_ofstream (const char* s, 
+                                                      ios_base::openmode mode)
+     : basic_ostream<charT, traits> (&fbuf)
+{
+//    init (&fbuf);  // hh 980603 already inited
+    if (!fbuf.open (s, openmode(mode|out)))
+        setstate (failbit);
+}
+
+template<class charT, class traits> 
+inline basic_ofstream<charT, traits>::~basic_ofstream ()
+{    }
+
+template<class charT, class traits> 
+inline basic_ofstream<charT, traits>::filebuf_type* 
+basic_ofstream<charT, traits>::rdbuf () const
+{
+    return (filebuf_type*)&fbuf;
+}
+
+template<class charT, class traits> 
+inline bool 
+basic_ofstream<charT, traits>:: is_open ()
+{
+    return fbuf.is_open ();
+}
+
+template<class charT, class traits> 
+inline void 
+basic_ofstream<charT, traits>::open (const char* s, ios_base::openmode mode)
+{
+    if (!fbuf.open (s, openmode(mode | out)))
+        setstate (failbit);
+}
+
+template<class charT, class traits> 
+inline void 
+basic_ofstream<charT, traits>:: close ()
+{
+    if (!fbuf.close ())
+        setstate (failbit);
+}
+
+template<class charT, class traits>
+class basic_fstream : public basic_iostream<charT, traits>
+{
+    typedef basic_filebuf<charT, traits> filebuf_type;
+
+public:
+    typedef charT                     char_type;
+    typedef typename traits::pos_type pos_type;
+    typedef typename traits::off_type off_type;
+    typedef typename traits::int_type int_type;
+    typedef traits                    traits_type;
+
+    basic_fstream ();
+    explicit basic_fstream (const char* s, 
+                   ios_base::openmode mode=ios_base::in|ios_base::out);
+
+    virtual ~basic_fstream ();
+
+    filebuf_type* rdbuf () const;
+    inline bool is_open ();
+    inline void open (const char* s, ios_base::openmode mode=
+                     ios_base::in|ios_base::out);
+    inline void close ();
+
+private:
+    filebuf_type fbuf;
+};
+
+template<class charT, class traits> 
+inline basic_fstream<charT, traits>::basic_fstream ()
+     : fbuf (), basic_iostream<charT, traits> (&fbuf)
+{
+//    init (&fbuf);  // hh 980603 already inited
+}
+
+template<class charT, class traits> 
+inline basic_fstream<charT, traits>::basic_fstream (const char* s, 
+                                                    ios_base::openmode mode)
+     : fbuf (), basic_iostream<charT, traits> (&fbuf)
+{
+//    init (&fbuf);  // hh 980603 already inited
+    if (!fbuf.open (s, mode))
+        setstate (failbit);
+}
+
+template<class charT, class traits> 
+inline basic_fstream<charT, traits>::~basic_fstream ()
+{ }
+
+template<class charT, class traits> 
+inline basic_fstream<charT, traits>::filebuf_type* 
+basic_fstream<charT, traits>::rdbuf () const
+{
+    return (filebuf_type*)&fbuf;
+}
+
+template<class charT, class traits> 
+inline bool 
+basic_fstream<charT, traits>::is_open () 
+{
+    return fbuf.is_open ();
+}
+
+template<class charT, class traits> 
+inline void 
+basic_fstream<charT, traits>::open (const char* s, ios_base::openmode mode)
+{
+    if (!fbuf.open (s, mode)) 
+        setstate (failbit);
+}
+
+template<class charT, class traits> 
+inline void 
+basic_fstream<charT, traits>::close () 
+{
+    if (!fbuf.close ()) 
+        setstate (failbit);
+}
+
+typedef basic_filebuf <char, char_traits<char> > filebuf;
+typedef basic_ifstream<char, char_traits<char> > ifstream;
+typedef basic_ofstream<char, char_traits<char> > ofstream;
+typedef basic_fstream <char, char_traits<char> > fstream;
+
+#ifdef MSIPL_WCHART
+typedef basic_filebuf <wchar_t, char_traits<wchar_t> > wfilebuf;
+typedef basic_ifstream<wchar_t, char_traits<wchar_t> > wifstream;
+typedef basic_ofstream<wchar_t, char_traits<wchar_t> > wofstream;
+typedef basic_fstream <wchar_t, char_traits<wchar_t> > wfstream;
+#endif
+
+#ifdef MSIPL_USING_NAMESPACE
+	} // namespace std
+#endif
+
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import reset
+#endif
+#pragma options align=reset
+
+#endif // RC_INVOKED
+
+#endif /* MSIPL_FSTREAM_H */
+
+// hh 971220 fixed MOD_INCLUDE
+// hh 971221 Changed filename from fstream.h to fstream
+// hh 971221 Made include guards standard
+// hh 971229 deleted unused arguments from setbuf
+// hh 971230 added RC_INVOKED wrapper
+// hh 980108 added explicit bool cast in case it is typedefed to int in is_open
+// hh 980129 changed to <istream> from <iostream>

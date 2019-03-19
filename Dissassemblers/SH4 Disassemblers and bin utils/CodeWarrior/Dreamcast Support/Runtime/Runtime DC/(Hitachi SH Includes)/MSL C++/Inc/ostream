@@ -1,0 +1,710 @@
+/*  Metrowerks Standard Library  Version 4.0  1998 August 10  */
+
+/*  $Date:: 6/18/98 12:28 PM                                 $ 
+ *  $Revision:: 12                                           $ 
+ *  $NoKeywords: $ 
+ *
+ *		Portions Copyright © 1995-1998 Metrowerks, Inc.
+ *		All rights reserved.
+ */
+
+/**
+ **  ostream          // hh 971223 Changed filename from ostream.h to ostream
+ **
+ **  Lib++  : The Modena C++ Standard Library,
+ **           Version 2.4, October 1997
+ **
+ **  Copyright (c) 1995-1997 Modena Software Inc.
+ **/
+
+#ifndef _OSTREAM             // hh 971223 Made include guards standard
+#define _OSTREAM
+
+#include <mcompile.h>
+
+#include <iosfwd>       // hh 971220 fixed MOD_INCLUDE
+#include <streambuf>    // hh 971220 fixed MOD_INCLUDE
+
+#ifndef RC_INVOKED // hh 971230
+
+#pragma options align=native
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import on
+#endif
+
+#ifdef MSIPL_USING_NAMESPACE
+	namespace std {
+#endif
+
+#ifdef MSIPL_EXCEPT
+#define IOS_TRY try {
+#define IOS_CATCH   } catch  (...) { flg |= ios_base::badbit; }
+#else
+#define IOS_TRY
+#define IOS_CATCH
+#endif
+ 
+#define SETSTATE(flg)                           \
+     if (sb) state |= flg; else state|=iostate(flg|badbit);  \
+     if (state & except) throwfailure ();
+ 
+#define SETSTATENON(obj, flg)                           \
+     if (obj.sb) obj.state|=flg; else obj.state|=iostate(flg|ios_base::badbit);  \
+     if (obj.state & obj.except) ios_base::throwfailure ();
+
+
+template<class charT, class traits>
+class basic_ostream : virtual public basic_ios<charT, traits>
+{
+     typedef basic_ostream<charT, traits> ostream_type;
+     typedef basic_streambuf<charT, traits> streambuf_type;
+     typedef ostreambuf_iterator<charT, traits> iter_type;
+     typedef num_put<charT, ostreambuf_iterator<charT, traits> > facet_type;
+
+public:
+     typedef charT                     char_type;
+     typedef typename traits::pos_type pos_type;
+     typedef typename traits::off_type off_type;
+     typedef typename traits::int_type int_type;
+     typedef traits                    traits_type;
+
+     class sentry{
+
+     private:
+          bool ok_;
+          basic_ostream<charT, traits>* pos;
+
+     public:
+		explicit sentry (basic_ostream<charT, traits>& os)
+			:ok_ (false),
+			pos (&os)
+		{
+			WRITE_LOCK(os._mutex);
+			if  (!os.state && os.tiestr) 
+				os.tiestr->flush ();
+			if  (!os.state) 
+				ok_ = true;
+			else 
+				SETSTATENON(os, ios_base::failbit)
+		}
+		~sentry ()
+		{
+			WRITE_LOCK(pos->_mutex);
+			if  (pos->fmtfl & unitbuf && pos->sb && pos->sb->pubsync () == -1)
+			{
+				pos->state |= badbit;
+				if  (pos->state & pos->except)
+					ios_base::throwfailure ();
+			}
+		}
+          operator bool (){return ok_;}
+
+     private:
+          sentry  (const sentry&); // not to be defined
+          sentry& operator=  (const sentry&); // not to be defined 
+     };
+
+     friend class sentry;
+     basic_ostream() {}
+     explicit basic_ostream (streambuf_type* sb);
+     virtual ~basic_ostream ();
+     inline ostream_type& operator<< (ostream_type& (*pf)(ostream_type&));
+     inline ostream_type& operator<< (basic_ios<charT, traits>& (*pf)(ios_base&));
+     inline ostream_type& operator<< (ios_base& (*pf)(ios_base&));
+
+#ifdef MSIPL_BOOL_BUILTIN
+     ostream_type& operator<< (bool n);
+#endif
+     ostream_type& operator<< (short n);
+     ostream_type& operator<< (unsigned short n);
+     ostream_type& operator<< (int n);
+     ostream_type& operator<< (unsigned int n);
+     ostream_type& operator<< (long n);
+     ostream_type& operator<< (unsigned long n);
+    #ifdef __MSL_LONGLONG_SUPPORT__				// as 981016 bracketed howard's long long code
+     ostream_type& operator<< (long long n);    // hh 980109 added long long support
+     ostream_type& operator<< (unsigned long long n);    // hh 980109 added long long support
+    #endif /* __MSL_LONGLONG_SUPPORT__ */
+	#ifndef _No_Floating_Point
+     ostream_type& operator<< (float f);
+     ostream_type& operator<< (double f);
+     ostream_type& operator<< (long double f);
+	#endif
+     ostream_type& operator<< ( const void* p);
+     ostream_type& operator<< (streambuf_type* sb);
+
+     ostream_type& put (char_type c);
+     ostream_type& write (const char_type* s, streamsize n);
+     ostream_type& flush ();
+     inline pos_type tellp ();
+     inline ostream_type& seekp (pos_type);
+     inline ostream_type& seekp (off_type, ios_base::seekdir);
+ 
+     friend basic_ostream<charT, traits>& // hh 980113 moved out
+     operator<< <charT, traits>(basic_ostream<charT, traits>&out, charT c);
+    
+     friend basic_ostream<charT, traits>& // hh 980113 moved out
+     operator<< <charT, traits>(basic_ostream<charT, traits>& out, const charT* s);
+
+	friend Init;
+};
+
+// Manipulators -- Standard basic_ostream
+template<class charT, class traits> 
+inline basic_ostream<charT, traits>& endl (basic_ostream<charT, traits>& os);
+
+template<class charT, class traits> 
+inline basic_ostream<charT, traits>& ends (basic_ostream<charT, traits>& os);
+
+template<class charT, class traits> 
+inline basic_ostream<charT, traits>& flush (basic_ostream<charT, traits>& os);
+
+template<class charT, class traits> 
+//inline // hh 980514
+basic_ostream<charT, traits>::basic_ostream(streambuf_type* sb)
+{
+	init(sb);  // hh 980518 corrected initialization (thanks ms)
+}
+
+template<class charT, class traits> 
+inline basic_ostream<charT, traits>::~basic_ostream (){}
+/*   // hh 971229 moved these into class declaration.  Compiler doesn't support definition here.
+template<class charT, class traits> 
+inline basic_ostream<charT, traits>::sentry::sentry (basic_ostream<charT, 
+                                             traits>& os):ok_ (false), pos (&os)
+{
+     WRITE_LOCK(os._mutex);
+     if  (!os.state && os.tiestr) 
+          os.tiestr->flush ();
+     if  (!os.state) 
+          ok_ = true;
+     else 
+          SETSTATENON(os, ios_base::failbit)
+}
+
+template<class charT, class traits> 
+inline basic_ostream<charT, traits>::sentry::~sentry ()
+{
+     WRITE_LOCK(pos->_mutex);
+     if  (pos->fmtfl & unitbuf && pos->sb && pos->sb->pubsync () == -1)
+     {
+          pos->state |= badbit;
+          if  (pos->state & pos->except)
+               ios_base::throwfailure ();
+     }
+}
+*/
+template<class charT, class traits> 
+inline basic_ostream<charT, traits>::
+pos_type basic_ostream<charT, traits>::tellp ()
+{
+     WRITE_LOCK(_mutex);
+     if (state & badbit || state & failbit)  // hh 971229 compiler doesn't support alternate syntax
+     	return -1;
+     return sb->pubseekoff (0, ios_base::cur, ios_base::out);
+//     return (state & badbit || state & failbit) ? -1 :
+//               sb->pubseekoff (0, ios_base::cur, ios_base::out);
+}
+
+template<class charT, class traits> 
+inline basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::seekp  (pos_type pos)
+{
+     WRITE_LOCK(_mutex);
+     if  (! (state & badbit || state & failbit))
+          sb->pubseekpos (pos);
+     return *this;
+}
+
+template<class charT, class traits> 
+inline basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::seekp (off_type off, ios_base::seekdir dir)
+{
+     WRITE_LOCK(_mutex);
+     if  (! (state & badbit || state & failbit))
+          sb->pubseekoff (off, dir);
+     return *this;
+}
+
+template<class charT, class traits> 
+basic_ostream<charT, traits>&
+operator<< (basic_ostream<charT, traits>& out, charT c)
+{
+	WRITE_LOCK(_mutex);
+	basic_ostream<charT, traits>::sentry s_ (out);
+	if  (s_)
+	{
+		typedef num_put<charT, ostreambuf_iterator<charT, traits> > facet_type;
+		#ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+			const facet_type& fmt = use_facet<facet_type>(out.getloc());
+		#else
+			const facet_type& fmt = use_facet(out.getloc(), (facet_type*)0);
+		#endif
+		if (fmt.putnumber(out, out, out.fill(), 0, 0, &c, 1).failed())
+			out.setstate(ios_base::badbit);
+		}
+	return out;
+}
+
+template<class charT, class traits> 
+basic_ostream<charT, traits>&
+operator<< (basic_ostream<charT, traits>& out, const charT* s)
+{
+	WRITE_LOCK(_mutex);
+	basic_ostream<charT, traits>::sentry s_ (out);
+	if  (s_)
+	{
+		typedef num_put<charT, ostreambuf_iterator<charT, traits> > facet_type;
+		#ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+			const facet_type& fmt = use_facet<facet_type>(out.getloc());
+		#else
+			const facet_type& fmt = use_facet(out.getloc(), (facet_type*)0);
+		#endif
+		if (fmt.putnumber(out, out, out.fill(), 0, 0, s, int(traits::length(s))).failed())
+			out.setstate(ios_base::badbit);
+	}
+	return out;
+}
+
+#ifdef MSIPL_BOOL_BUILTIN
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::operator<< (bool n)
+{
+      WRITE_LOCK(_mutex);
+      sentry s_ (*this);
+      if  (s_)
+      {
+      #ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+           const facet_type& fmt = use_facet<facet_type> (getloc());
+      #else
+           const facet_type& fmt = use_facet (getloc(),  (facet_type*)0);
+      #endif
+		if (fmt.put(*this, *this, fillch, n).failed())
+			setstate(badbit);
+      }
+     return *this;
+}
+#endif /* MSIPL_BOOL_BUILTIN */
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::operator<< (short n)
+{
+	WRITE_LOCK(_mutex);
+	sentry s_ (*this);
+	if  (s_)
+	{
+		#ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+			const facet_type& fmt = use_facet<facet_type> (getloc());
+		#else
+			const facet_type& fmt = use_facet (getloc(),  (facet_type*)0);
+		#endif
+		fmtflags f = flags() & ios_base::basefield;
+		if (f == oct || f == hex)
+		{
+			if (fmt.put(*this, *this, fillch, (unsigned long)(unsigned short)n).failed())
+				setstate(badbit);
+		}
+		else {
+			if (fmt.put(*this, *this, fillch, (long)n).failed())
+				setstate(badbit);
+		}
+	}
+	return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::operator<< (unsigned short n)
+{
+	WRITE_LOCK(_mutex);
+	sentry s_ (*this);
+	if  (s_)
+	{
+		#ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+			const facet_type& fmt = use_facet<facet_type> (getloc());
+		#else
+			const facet_type& fmt = use_facet (getloc(),  (facet_type*)0);
+		#endif
+		if (fmt.put(*this, *this, fillch, (unsigned long)n).failed())
+			setstate(badbit);
+	}
+     return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::operator<< (int n)
+{
+	WRITE_LOCK(_mutex);
+	sentry s_ (*this);
+	if  (s_)
+	{
+		#ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+			const facet_type& fmt = use_facet<facet_type> (getloc());
+		#else
+			const facet_type& fmt = use_facet (getloc(),  (facet_type*)0);
+		#endif
+		if (fmt.put(*this, *this, fillch, (long)n).failed())
+			setstate(badbit);
+	}
+	return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::operator<< (unsigned int n)
+{
+	WRITE_LOCK(_mutex);
+	sentry s_ (*this);
+	if  (s_)
+	{
+		#ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+			const facet_type& fmt = use_facet<facet_type> (getloc());
+		#else
+			const facet_type& fmt = use_facet (getloc(),  (facet_type*)0);
+		#endif
+		if (fmt.put(*this, *this, fillch, (unsigned long)n).failed())
+			setstate(badbit);
+	}
+     return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::operator<< (long n)
+{
+	WRITE_LOCK(_mutex);
+	sentry s_ (*this);
+	if  (s_) 
+	{
+		#ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+			const facet_type& fmt = use_facet<facet_type> (getloc());
+		#else
+			const facet_type& fmt = use_facet (getloc(),  (facet_type*)0);
+		#endif
+		if (fmt.put(*this, *this, fillch, n).failed())
+			setstate(badbit);
+	}
+     return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::operator<< (unsigned long n)
+{
+	WRITE_LOCK(_mutex);
+	sentry s_ (*this);
+	if  (s_) 
+	{
+		#ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+			const facet_type& fmt = use_facet<facet_type> (getloc());
+		#else
+			const facet_type& fmt = use_facet (getloc(),  (facet_type*)0);
+		#endif
+		if (fmt.put(*this, *this, fillch, n).failed())
+			setstate(badbit);
+	}
+	return *this;
+}
+
+#ifdef __MSL_LONGLONG_SUPPORT__
+template<class charT, class traits> // hh 980109 added long long support
+//inline  // hh 980129
+basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::operator<< (long long n)
+{
+	WRITE_LOCK(_mutex);
+	sentry s_ (*this);
+	if  (s_) 
+	{
+		#ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+			const facet_type& fmt = use_facet<facet_type> (getloc());
+		#else
+			const facet_type& fmt = use_facet (getloc(),  (facet_type*)0);
+		#endif
+		if (fmt.put(*this, *this, fillch, n).failed())
+			setstate(badbit);
+	}
+	return *this;
+}
+
+
+
+template<class charT, class traits> // hh 980109 added long long support
+//inline  // hh 980129
+basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::operator<< (unsigned long long n)
+{
+	WRITE_LOCK(_mutex);
+	sentry s_ (*this);
+	if  (s_) 
+	{
+		#ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+			const facet_type& fmt = use_facet<facet_type> (getloc());
+		#else
+			const facet_type& fmt = use_facet (getloc(),  (facet_type*)0);
+		#endif
+		if (fmt.put(*this, *this, fillch, n).failed())
+			setstate(badbit);
+	}
+	return *this;
+}
+#endif /* __MSL_LONGLONG_SUPPORT__ */
+
+#ifndef _No_Floating_Point
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::operator<< (float n)
+{
+	WRITE_LOCK(_mutex);
+	sentry s_ (*this);
+	if  (s_) 
+	{
+		#ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+			const facet_type& fmt = use_facet<facet_type> (getloc());
+		#else
+			const facet_type& fmt = use_facet (getloc(),  (facet_type*)0);
+		#endif
+		if (fmt.put(*this, *this, fillch, n).failed())
+			setstate(badbit);
+	}
+	return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::operator<< (double n)
+{
+	WRITE_LOCK(_mutex);
+	sentry s_ (*this);
+	if  (s_) 
+	{
+		#ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+			const facet_type& fmt = use_facet<facet_type> (getloc());
+		#else
+			const facet_type& fmt = use_facet (getloc(),  (facet_type*)0);
+		#endif
+		if (fmt.put(*this, *this, fillch, n).failed())
+			setstate(badbit);
+	}
+	return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::operator<< (long double n)
+{
+	WRITE_LOCK(_mutex);
+	sentry s_ (*this);
+	if  (s_) 
+	{
+		#ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+			const facet_type& fmt = use_facet<facet_type> (getloc());
+		#else
+			const facet_type& fmt = use_facet (getloc(),  (facet_type*)0);
+		#endif
+		if (fmt.put(*this, *this, fillch, n).failed())
+			setstate(badbit);
+	}
+	return *this;
+}
+
+#endif // _No_Floating_Point
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::operator<< (const void* n)
+{
+	WRITE_LOCK(_mutex);
+	sentry s_ (*this);
+	if  (s_) 
+	{
+		#ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+			const facet_type& fmt = use_facet<facet_type> (getloc());
+			const ctype<charT>& ct = use_facet<ctype<charT> >(getloc());
+		#else
+			const facet_type& fmt = use_facet (getloc(),  (facet_type*)0);
+			const ctype<charT>& ct = use_facet(getloc(), (ctype<charT>*)0);
+		#endif
+		if (fmt.put(*this, *this, ct.widen('0'), n).failed())
+			setstate(badbit);
+	}
+	return *this;
+}
+
+template<class charT, class traits> 
+inline basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::operator<< (ostream_type&  (*pf) (ostream_type&))
+{
+     return  (*pf) (*this); 
+}
+ 
+template<class chT, class trts> 
+inline basic_ostream<chT, trts>&
+basic_ostream<chT, trts>::operator<< (basic_ios<chT, trts>&  (*pf) (ios_base&))
+{
+     (*pf) (*this); 
+     return *this;
+}
+
+template<class charT, class traits> 
+inline basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::operator<< (ios_base&  (*pf) (ios_base&))
+{
+     (*pf) (*this); 
+     return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::operator<< (streambuf_type* buf)
+{
+     int_type ch;
+     streamsize count = 0;
+     iostate flg = goodbit;
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this);
+          if  (s_ && buf)
+               while  (!traits::eq_int_type (ch = buf->sbumpc (), traits::eof ()))
+               {
+                    if  (traits::eq_int_type (sb->sputc (ch), traits::eof ())) 
+                    {
+                         buf->sputbackc (ch); 
+                         break;
+                    }
+                    count++;
+               }
+          else
+               flg |= badbit;
+     if  (!count)
+          flg |= failbit;
+     IOS_CATCH
+     SETSTATE(flg)
+     return *this;
+}
+
+template<class charT, class traits>
+//inline  // hh 980129
+basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::put (char_type c)
+{
+     iostate flg = goodbit;
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this);
+          if  (!s_ || traits::eq_int_type (sb->sputc (c), traits::eof ()))
+               flg |= badbit;
+     IOS_CATCH
+     SETSTATE(flg)
+     return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::write (const char_type* s, streamsize n)
+{
+     iostate flg = goodbit;
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this);
+          if  (s_ &&  (n != sb->sputn (s, n)))
+               flg |= badbit;
+     IOS_CATCH
+     SETSTATE(flg)
+     return *this;
+}
+
+template<class charT, class traits> 
+//inline  // hh 980129
+basic_ostream<charT, traits>&
+basic_ostream<charT, traits>::flush ()
+{
+     iostate flg = goodbit;
+     IOS_TRY
+          WRITE_LOCK(_mutex);
+          sentry s_ (*this);
+          if  (s_ && sb && sb->pubsync () == -1) 
+               flg |= badbit;
+     IOS_CATCH
+     SETSTATE(flg)
+     return *this;
+}
+
+template<class chT, class trts> 
+inline basic_ostream<chT, trts>&
+endl (basic_ostream<chT, trts>& os)
+{
+     os.put (os.widen ('\n'));
+     os.flush ();
+     return os;
+}
+ 
+template<class charT, class traits> 
+inline basic_ostream<charT, traits>&
+ends (basic_ostream<charT, traits>& os)
+{
+     os.put (traits::eos ());
+     return os;
+}
+ 
+template<class charT, class traits> 
+inline basic_ostream<charT, traits>&
+flush (basic_ostream<charT, traits>& os)
+{
+     os.flush ();
+     return os;
+}
+
+#undef IOS_TRY
+#undef IOS_CATCH
+#undef SETSTATE
+#undef SETSTATENON
+
+typedef basic_ostream<char, char_traits<char> > ostream;
+#ifdef MSIPL_WCHART
+typedef basic_ostream<wchar_t, char_traits<wchar_t> > wostream;
+#endif
+
+#ifdef MSIPL_USING_NAMESPACE
+	} // namespace std 
+#endif
+
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import reset
+#endif
+#pragma options align=reset
+
+#endif // RC_INVOKED
+
+#endif /* MSIPL_OSTREAM_H */
+
+// hh 971220 fixed MOD_INCLUDE
+// hh 971223 Changed filename from ostream.h to ostream
+// hh 971223 added alignment wrapper
+// hh 971223 Made include guards standard
+// hh 971229 Moved sentry member definitions into class.  Compiler doesn't support non-inlined
+//           template nested classes.
+// hh 971229 changed ? : to if because compiler doesn't support complex expression in ? :
+// hh 971230 added RC_INVOKED wrapper
+// hh 980109 added long long support
+// hh 980408 wrapped up in #ifndef _No_Floating_Point
+// hh 980702 changed the output of void* to fill with '0' instead of the fill char from locale
+//           so that void*'s would be properly formatted.
+// as 981016 bracketed howard's long long code

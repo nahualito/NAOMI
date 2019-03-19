@@ -1,0 +1,263 @@
+========================================================================
+Metrowerks C/C++ Compiler Release Notes 
+========================================================================
+
+Version: 2.2 ( __MWERKS__ == 0x2200 )
+Date:    August 28, 1998
+Author:  Andreas Hommel
+
+========================================================================
+New Features in This Version
+========================================================================
+
+*  support for member templates
+
+   Limitations:
+
+      conversion member function templates are not supported
+
+      member templates and member template members cannot be defined
+      outside of their class definition.
+
+         Member template functions are not automatically inline unless
+         they are explicitly declared to be inlined. For example:
+
+            struct X {
+               template <class T> void f(T) {};
+               template <class T> inline void g(T) {};
+
+               template <class U> struct N {
+                  void h(U) {};
+               };
+            };
+
+         only X::g and X::N::g are inlined but X::f will not be inlined.
+         This can be used to prevent coad bloat until out-of-line 
+         declarations are supported.
+
+*  support for class template partial specializations
+
+*  support for virtual function overrides with covariant return types:
+   
+      class foo {
+      public:
+         virtual const foo *func();
+      };
+
+      class bar : public foo , public foo2 {
+      public:
+         virtual bar *func();   // OK, covariant return type
+      };
+
+*  support for partial template function ordering
+
+*  support for function-try-blocks
+
+*  support for deferred code generation
+
+      #pragma defer_codegen on|off|reset (default: off)
+
+   This option allows inlining of 'inline' and 'auto-inline'
+   functions that are called before their definition:
+ 
+		#pragma defer_codegen on
+		#pragma auto_inline on
+
+		extern void f();
+		extern void g();
+
+		main()
+		{
+			f();	// will be inlined
+			g();	// will be inlined
+		}
+
+		inline void f() {}
+		void g() {}
+
+   The compiler will need more memory when this option is selected.
+
+
+*  the ANSI C compiler now allows pointer -> pointer-size integral
+   conversions in global initializations if "ANSI strict" is not
+   selected.
+
+      char c;
+      long arr = (long)&c;     // accepted (not ANSI C)
+
+*  support for throwing exceptions in conditional expressions:
+
+      int foo(bool cond)
+      {
+         return cond ? 1 : throw "oops";
+      }
+
+*  an import / export __declspec after a class/struct keyword is now
+   also supported in non-Win ABI compilers.
+
+*  the preprocessor now includes some info comments about the
+   current include file in preprocessor dumps. These comments can be
+   disabled via a '#pragma simple_prepdump on'.
+
+*  support for two new built-in functions:
+
+      primary_expression:
+         __builtin_align ( <type-id> )
+         __builtin_type ( <type-id> )
+
+   '__builtin_align' returns the byte-alignment of <type-id>.
+   '__builtin_align' returns a type specific value (integral/enum: 0,
+   floating point: 1, other 2).
+
+*  the size limit for fully expanded macros has been increased to 128K
+   characters (was 32K).
+
+*  better code when class type exceptions are throw
+
+*  improved template function inlining
+
+*  updated linkage of 'inline' functions to latest specs
+
+*  the 'implicit int' rule is no longer supported in C++
+
+		f(int a)   //  error: implicit 'int'
+		{
+			return a+1;
+		}
+
+*  #pragma suppress_init_code on|off|reset (default: off)
+
+   This #pragma can be used to suppress any static data initialization
+   code generation (eg constructor calls). This should not be used
+   unless you really know what you are doing.
+
+*  #pragma reverse_bitfields on|off|reset (default: off)
+
+   This #pragma reverses the bitfield allocation.
+
+*  This WinABI alignment #pragma (#pragma pack) and alignment modes
+   are now also supported the the MacOS PPC and 68K compilers.
+
+
+========================================================================
+Bugs Fixed in This Version
+========================================================================
+
+*  the compiler no longer accepts return types in conversion functions
+
+*  the compiler no longer accepts non-member conversion functions
+
+*  fixes a bug with binding temporaries to non-const references during
+   overload matching
+
+*  the C++ compiler no longer allows implicit conversions from constant
+   enumeration expressions to a pointer type.
+
+*  unnamed namespace members no longer require a prototype when the
+   "require function prototype" option is selected.
+
+*  the compiler no longer generates 'implicit arithmetic conversion'
+   warnings when the left side of an assignment is a bitfield.
+
+*  functions that are defined inside of an Objective C class
+   implementation now have access to private and protected members.
+
+*  fixes a qualified non-static member compile-time access bug in
+   certain class trees with nested qualified base classes.
+
+*  fixes a bug with reinterpret reference casts
+
+*  fixes a preprocessor bug with 'defined' in macros that are expanded
+   inside of #if and #elif expressions
+
+*  fixes a dynamic initialization bug where static template class members
+   where initialized more than once (MW05797).
+
+*  fixes a template class instance bug in SYM files (MW07582).
+
+*  fixes some bugs with throwing and catching:
+
+      const/volatile pointer/reference types
+      ambiguous, local, and/or non-public base classes
+      'void' pointers.
+      non-trivial virtual base classes (BR6787)
+
+*  multiple using declarations are now accepted
+
+		namespace N {
+			typedef int T;
+			typedef int T;	//	OK
+		}
+		using N::T;
+		using N::T;	//	also OK
+
+*  fixes a bug with class-type conditional declarations (MW03054).
+
+*  non-const or non-lvalue class objects can no longer be assigned
+   using a non-const assignment operator (eg X& operator(X&))
+
+*  fixes a bug with packed 1-byte ANSI C unions
+
+
+========================================================================
+Additional Notes
+========================================================================
+
+*  obsolete #pragmas
+
+	static_inlines 
+	direct_destruction 
+
+*  precompiled header files will have to be re-compiled
+
+*  New/changed  error messages:
+
+   "inconsistent use of 'class' and 'struct' keywords"
+
+    #pragma warn_structclass on | off | reset
+
+      #pragma warn_structclass on
+      class X;
+      struct X { int a; }; // warning: inconsistent use of
+
+------
+
+   "variable '%u' is not used in function",
+
+      has been changed to:
+
+   "variable / argument '%u' is not used in function",
+
+------
+
+		/* [245] */
+		"illegal partial specialization",
+		/* [246] */
+		"illegal partial specialization argument list",
+		/* [247] */
+		"ambiguous use of partial specialization",
+		/* [248] */
+		"local classes shall not have member templates",
+		/* [249] */
+		"illegal template argument dependent expression",
+		/* [250] */
+		"implicit 'int' is no longer supported in C++",
+
+========================================================================
+Contacting Metrowerks
+========================================================================
+
+For bug reports, technical questions, and suggestions, please use the
+forms in the Release Notes folder on the CD, and send them to
+
+support@metrowerks.com
+
+See the CodeWarrior on the Nets document in the Release Notes folder for
+more contact information, including a list of Internet newsgroups, 
+online services, and patch and update sites.
+
+========================================================================
+
+Andreas Hommel
+CodeWarrior C/C++ Product Architect
+Metrowerks Corporation

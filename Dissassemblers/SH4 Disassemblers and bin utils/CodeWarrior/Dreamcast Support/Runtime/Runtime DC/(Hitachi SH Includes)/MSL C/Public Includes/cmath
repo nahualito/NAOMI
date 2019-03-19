@@ -1,0 +1,1720 @@
+/*  Metrowerks Standard Library  Version 4.0  1998 August 10  */
+
+/*  $Date:: 3/11/98 12:22 PM                                 $ 
+ *  $Revision:: 5                                            $ 
+ *  $NoKeywords: $ 
+ *
+ *		Copyright © 1995-1998 Metrowerks, Inc.
+ *		All rights reserved.
+ */
+ 
+/*
+ *	math.ppc.h
+ */
+ 
+#ifndef __cmath__
+#define __cmath__
+
+#include <ansi_parms.h>
+
+#pragma options align=native
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import on
+#endif
+
+
+
+/* Turn off k33d_calls since the math functions are implemented in
+ asm and do not abide by this calling convention */
+
+#ifdef __INTEL__
+	#pragma k63d_calls off
+#endif
+
+/* 
+ *	common macro definitions 
+ */
+
+#ifdef __cplusplus		/* vss 980809 */
+	extern "C" {
+#endif
+
+long __float_huge[];
+long __float_nan[];
+long __double_huge[];
+long __extended_huge[];
+
+#define __STDC_IEC_559__
+#if !(__dest_os==__mac_os  && defined(__FP__)) /* MacOs Support/Headers/Universal Headers/fp.h 
+                     also defines efficiency types
+                     we recommend NOT using fp.h to do
+                     this if you want your code to be
+                     portable outside the MAC environment.
+                     The draft standard specifies
+                     double_t and float_t be introduced in math.h.
+                     fp.h is a MAC specific header.
+               */
+#ifndef __MC68K__
+	#define FLT_EVAL_METHOD  0	
+#else
+	#define FLT_EVAL_METHOD  2
+#endif
+
+/*
+ * 7.7
+ * 
+ * Defines
+ */	
+#if	(FLT_EVAL_METHOD == 0)
+
+	typedef float float_t;
+	typedef double double_t;
+	
+#elif (FLT_EVAL_METHOD == 1)
+
+	typedef double float_t;
+	typedef double double_t;
+	
+#elif (FLT_EVAL_METHOD == 2)
+
+	typedef long double float_t;
+	typedef long double double_t;	
+
+#endif
+
+/*  number classification */
+
+
+#define HUGE_VAL  (*(double*)     __double_huge)
+#define INFINITY  (*(float*)      __float_huge)
+#define NAN       (*(float*)      __float_nan)
+
+#endif  /*  __FP__  */
+ 
+#define HUGE_VALF (*(float*)      __float_huge)
+#define HUGE_VALL (*(long double*)__extended_huge)
+
+#define FP_NAN       1  /*   quiet NaN (signaling Nan supported on MAC but nowhere else. if you need this support begin this list with FP_SNAN,FP_QNAN instead of FP_NAN)*/
+
+#if !(__dest_os==__mac_os  && defined(__FP__))
+
+#define FP_INFINITE  2  /*   + or - infinity      */
+#define FP_ZERO      3  /*   + or - zero          */
+#define FP_NORMAL    4  /*   all normal numbers   */
+#define FP_SUBNORMAL 5  /*   denormal numbers     */
+
+/*  hardware support for fma  */
+
+/*  #define FP_FAST_FMA   */
+/*  #define FP_FAST_FMAF  */
+/*  #define FP_FAST_FMAL  */
+
+/*  ilogb() helper macros  */
+
+/*  #define FP_ILOGB0   INT_MIN  */
+/*  #define FP_ILOGBNAN INT_MAX  */
+
+#ifndef __MC68K__
+	#define DECIMAL_DIG 17
+#else
+	#define DECIMAL_DIG 21
+#endif
+
+
+
+/*  7.7.3  Classification macros */
+
+int __fpclassifyf(float x);
+int __fpclassifyd(double x);
+int __fpclassify(long double x); 
+
+#define fpclassify(x)  \
+	 ((sizeof(x) == 4)  ? __fpclassifyf((float)(x)) \
+	: (sizeof(x) == 8) ?  __fpclassifyd((double)(x)) \
+	:                     __fpclassify(x) )
+
+#define isnormal(x) (fpclassify(x) == FP_NORMAL)
+#define isnan(x) (fpclassify(x) == FP_NAN)
+
+#ifdef __INTEL__
+
+	int signbit(double x);
+	int isfinite(double x);
+
+#else
+
+	int __signbitf(float x);
+	int __signbitd(double x);
+	int __signbit(long double x);
+
+	#define signbit(x)  \
+		 ((sizeof(x) == 4)  ? __signbitf((float)(x)) \
+		: (sizeof(x) == 8) ? __signbitd((double)(x)) \
+		:                                 __signbit(x) )
+
+	int __isfinitef(float x);
+	int __isfinited(double x);
+	int __isfinite(long double x);
+
+	#define isfinite(x)  \
+		 ((sizeof(x) == 4)  ? __isfinitef((float)(x)) \
+		: (sizeof(x) == 8) ? __isfinited((double)(x)) \
+		:                                 __isfinite(x) )
+
+#endif /* __INTEL__ */
+#endif  /*  __FP__  */
+
+#define isinf(x) (fpclassify(x) == FP_INFINITE)
+
+#ifndef __FP__
+	short relation(double_t x, double_t y);
+#endif
+#if __dest_os == __mac_os
+
+	/*  7/7/14  Comparison macros  */
+
+	#define isgreater(x, y) (relation(x, y) == 0)
+	#define isgreaterequal(x, y) (relation(x, y) % 2 == 0)
+	#define isless(x, y) (relation(x, y) == 1)
+	#define islessequal(x, y) ((relation(x, y)+1)/2 == 1)
+	#define islessgreater(x, y) (relation(x, y) <= 1)
+	#define isunordered(x, y) (relation(x, y) == 3)
+#endif
+
+#ifdef __INTEL__
+/* macros map onto condtion codes of x86 fpu status word 
+  (it is more efficient to return the condition codes of the status word)
+  */  
+    #define __EQUAL 0x4000
+    #define __GREATERTHAN 0
+    #define __LESSTHAN 0x0100
+    #define __UNORDERED 0x4500
+	#define isgreater(x, y) (!relation(x, y))
+	#define isgreaterequal(x, y) (!((relation(x, y)>>8) % 2))
+	#define isless(x, y) (relation(x, y) == __LESSTHAN)
+	#define islessequal(x, y) (relation(x, y)%__UNORDERED )
+	#define islessgreater(x, y) (relation(x, y) <= __LESSTHAN)
+	#define isunordered(x, y) (relation(x, y) == __UNORDERED)
+    #define isequal(x, y) (relation(x, y) == __EQUAL)
+#endif /* __INTEL__ */
+    
+#ifdef __cplusplus
+	}
+#endif
+
+#ifdef __cplusplus
+	#ifdef _MSL_USING_NAMESPACE
+		namespace std {
+	#endif
+	extern "C" {
+#endif
+
+#ifdef __MC68K__
+
+	/* Set up potential for inline FPU behavior on 68K  */
+
+	#if !defined(_INLINE_FPU_CALLS_)
+		#define _INLINE_FPU_CALLS_	0
+	#endif
+
+	#if _INLINE_FPU_CALLS_ && __MC68881__
+		/* call the FPU directly (NOT ANSI COMPATIBLE) */
+		long double _fpucos(long double:__FP0):__FP0                    = { 0xF200,0x001D };
+		long double _fpusin(long double:__FP0):__FP0                    = { 0xF200,0x000E };
+		long double _fputan(long double:__FP0):__FP0                    = { 0xF200,0x000F };
+		long double _fpuacos(long double:__FP0):__FP0                   = { 0xF200,0x001C };
+		long double _fpuasin(long double:__FP0):__FP0                   = { 0xF200,0x000C };
+		long double _fpuatan(long double:__FP0):__FP0                   = { 0xF200,0x000A };
+		long double _fpucosh(long double:__FP0):__FP0                   = { 0xF200,0x0019 };
+		long double _fpusinh(long double:__FP0):__FP0                   = { 0xF200,0x0002 };
+		long double _fputanh(long double:__FP0):__FP0                   = { 0xF200,0x0009 };
+		long double _fpuexp(long double:__FP0):__FP0                    = { 0xF200,0x0010 };
+		long double _fpuldexp(long double:__FP0,long:__D0):__FP0        = { 0xF200,0x4026 };
+		long double _fpulog(long double:__FP0):__FP0                    = { 0xF200,0x0014 };
+		long double _fpulog10(long double:__FP0):__FP0                  = { 0xF200,0x0015 };
+		long double _fpufabs(long double:__FP0):__FP0                   = { 0xF200,0x0018 };
+		long double _fpusqrt(long double:__FP0):__FP0                   = { 0xF200,0x0004 };
+		long double _fpufmod(long double:__FP0,long double:__FP1):__FP0 = { 0xF200,0x0421 };
+	#endif
+
+#endif
+#if !(__dest_os==__mac_os  && defined(__FP__))
+/* 
+ *	common function prototype declarations
+ *  (better known as the "foo" functions)
+ *  (foof and fool defined below)
+ */
+
+#if !(defined(__MC68K__) && defined(__cplusplus))
+
+	/* Everything but 68K C++ */
+	double acos(double x);
+	double asin(double x);
+	double atan(double x);
+	double atan2(double y, double x);
+	double cos(double x);
+	double sin(double x);
+	double tan(double x);
+	double cosh(double x);
+	double sinh(double x);
+	double tanh(double x);
+	double acosh(double x);
+	double asinh(double x);
+	double atanh(double x);
+	double exp(double x);
+	double frexp(double x, int *exp);
+	double ldexp(double x, int exp);
+	double log(double x);
+	double log10(double x);
+	double modf(double x, double *iptr);
+	double exp2(double x);
+	double expm1(double x);
+	double log1p(double x);
+	double log2(double x);
+	double logb(double x);
+	double_t scalb(double_t x, long n); 
+	/*	int ilogb(double x); */
+	#ifndef __POWERPC__
+		double fabs(double x);
+	#endif
+	double pow(double x, double y);
+	double sqrt(double x);
+	/*	double cbrt(double x); */
+	double hypot(double x, double y);
+	#ifndef __INTEL__
+		double erf(double x);
+		double erfc(double x);
+		double gamma(double x);
+		double lgamma(double x);
+	#endif
+	double nan(const char *tagp);
+	double ceil(double x);
+	double floor(double x);
+	double nearbyint(double x);
+	double rint(double x);
+	long rinttol(double x);
+	double round(double x);
+	long roundtol(double x);
+	double trunc(double x);
+	double fmod(double x, double y);
+	double remainder(double x, double y);
+	double remquo(double x, double y, int *quo);
+	double copysign(double x, double y);
+	#if __dest_os == __mac_os
+		double nextafterd(double x, double y);
+	#endif
+	/*	double nextafterx(double x, long double y); */
+	double fdim(double x, double y);
+	double fmax(double x, double y);
+	double fmin(double x, double y);
+
+	#ifdef __MC68K__
+		/* 68K C only */
+		double acosd(double x);
+		double asind(double x);
+		double atand(double x);
+		double atan2d(double y, double x);
+		double cosd(double x);
+		double sind(double x);
+		double tand(double x);
+		double coshd(double x);
+		double sinhd(double x);
+		double tanhd(double x);
+		double acoshd(double x);
+		double asinhd(double x);
+		double atanhd(double x);
+		double expd(double x);
+		double frexpd(double x, int *exp);
+		double ldexpd(double x, int exp);
+		double logd(double x);
+		double log10d(double x);
+		double modfd(double x, double *iptr);
+		double exp2d(double x);
+		double expm1d(double x);
+		double log1pd(double x);
+		double log2d(double x);
+		double logbd(double x);
+		double fabsd(double x);
+		double powd(double x, double y);
+		double sqrtd(double x);
+		double hypotd(double x, double y);
+		double erfd(double x);
+		double erfcd(double x);
+		double gammad(double x);
+		double lgammad(double x);
+		double ceild(double x);
+		double floord(double x);
+		double nearbyintd(double x);
+		double rintd(double x);
+		double roundd(double x);
+		double truncd(double x);
+		double fmodd(double x, double y);
+		double remainderd(double x, double y);
+		double remquod(double x, double y, int *quo);
+		double copysignd(double x, double y);
+		double nextafterd(double x, double y);
+		double fdimd(double x, double y);
+		double fmaxd(double x, double y);
+		double fmind(double x, double y);
+
+		/*  And these to redirect foo to food  */
+
+		#if _INLINE_FPU_CALLS_ && __MC68881__
+			#define acos(x)       ((double)_fpuacos((long double)(x)))
+			#define asin(x)       ((double)_fpuasin((long double)(x)))
+			#define atan(x)       ((double)_fpuatan((long double)(x)))
+			#define cos(x)        ((double)_fpucos((long double)(x)))
+			#define sin(x)        ((double)_fpusin((long double)(x)))
+			#define tan(x)        ((double)_fputan((long double)(x)))
+			#define cosh(x)       ((double)_fpucosh((long double)(x)))
+			#define sinh(x)       ((double)_fpusinh((long double)(x)))
+			#define tanh(x)       ((double)_fputanh((long double)(x)))
+			#define exp(x)        ((double)_fpuexp((long double)(x)))
+			#define ldexp(x)      ((double)_fpuldexp((long double)(x)))
+			#define log(x)        ((double)_fpulog((long double)(x)))
+			#define log10(x)      ((double)_fpulog10((long double)(x)))
+			#define sqrt(x)       ((double)_fpusqrt((long double)(x)))
+			#define fabs(x)       ((double)_fpufabs((long double)(x)))
+			#define fmod(x)       ((double)_fpufmod((long double)(x)))
+		#else
+			#define acos       acosd
+			#define asin       asind
+			#define atan       atand
+			#define cos        cosd
+			#define sin        sind
+			#define tan        tand
+			#define cosh       coshd
+			#define sinh       sinhd
+			#define tanh       tanhd
+			#define exp        expd
+			#define ldexp      ldexpd
+			#define log        logd
+			#define log10      log10d
+			#define sqrt       sqrtd
+			#define fabs       fabsd
+			#define fmod       fmodd
+		#endif
+
+		double scalbn(double x, int n);
+		double scalbln(double x, long n);
+		long int lrint(double x);
+		long long llrint(double x);
+		long int lround(double x);
+		long long llround(double x);
+
+		#define atan2      atan2d
+		#define acosh      acoshd
+		#define asinh      asinhd
+		#define atanh      atanhd
+		#define frexp      frexpd
+		#define modf       modfd
+		#define exp2       exp2d
+		#define expm1      expm1d
+		#define log1p      log1pd
+		#define log2       log2d
+		#define logb       logbd
+		#define scalbn(x, n)  ((double)scalb(x, n))
+		#define scalbln(x, n) ((double)scalb(x, n))
+	/*	#define ilogb      ilogbd */
+		#define pow        powd
+		#define hypot      hypotd
+		#define erf        erfd
+		#define erfc       erfcd
+		#define gamma      gammad
+		#define lgamma     lgammad
+		#define ceil       ceild
+		#define floor      floord
+		#define nearbyint  nearbyintd
+		#define rint       rintd
+		#define round      roundd
+		#define trunc      truncd
+		#define remainder  remainderd
+		#define remquo     remquod
+		#define copysign   copysignd
+		#define nextafter  nextafterd
+		#define fdim       fdimd
+		#define fmax       fmaxd
+		#define fmin       fmind
+	/*	#define fma(x, y, z) ((double)((long double)(x)*(y) + (z))) */
+
+	#endif
+
+#else
+	// 68K C++ only
+
+	double_t scalb(double_t x, long n); 
+
+	#if _INLINE_FPU_CALLS_ && __MC68881__
+		} // extern "C"
+
+		inline long double acos(long double x)
+			{return _fpuacos(x);}
+		inline long double asin(long double x)
+			{return _fpuasin(x);}
+		inline long double atan(long double x)
+			{return _fpuatan(x);}
+		inline long double cos(long double x)
+			{return _fpucos(x);}
+		inline long double sin(long double x)
+			{return _fpusin(x);}
+		inline long double tan(long double x)
+			{return _fputan(x);}
+		inline long double cosh(long double x)
+			{return _fpucosh(x);}
+		inline long double sinh(long double x)
+			{return _fpusinh(x);}
+		inline long double tanh(long double x)
+			{return _fputanh(x);}
+		inline long double exp(long double x)
+			{return _fpuexp(x);}
+		inline long double ldexp(long double x, int exp)
+			{return _fpuldexp(x, exp);}
+		inline long double log(long double x)
+			{return _fpulog(x);}
+		inline long double log10(long double x)
+			{return _fpulog10(x);}
+		inline long double sqrt(long double x)
+			{return _fpusqrt(x);}
+		inline long double fabs(long double x)
+			{return _fpufabs(x);}
+		inline long double fmod(long double x, long double y)
+			{return _fpufmod(x, y);}
+
+		extern "C" {
+	#else
+		long double acos(long double x);
+		long double asin(long double x);
+		long double atan(long double x);
+		long double cos(long double x);
+		long double sin(long double x);
+		long double tan(long double x);
+		long double cosh(long double x);
+		long double sinh(long double x);
+		long double tanh(long double x);
+		long double exp(long double x);
+		long double ldexp(long double x, int exp);
+		long double log(long double x);
+		long double log10(long double x);
+		long double sqrt(long double x);
+		long double fabs(long double x);
+		long double fmod(long double x, long double y);
+	#endif
+
+	long double atan2(long double y, long double x);
+	long double acosh(long double x);
+	long double asinh(long double x);
+	long double atanh(long double x);
+	long double frexp(long double x, int *exp);
+	long double modf(long double x, long double *iptr);
+	long double exp2(long double x);
+	long double expm1(long double x);
+	long double log1p(long double x);
+	long double log2(long double x);
+	long double logb(long double x);
+//	int ilogb(long double x);
+	long double pow(long double x, long double y);
+//	long double cbrt(long double x);
+	long double hypot(long double x, long double y);
+	long double erf(long double x);
+	long double erfc(long double x);
+	long double gamma(long double x);
+	long double lgamma(long double x);
+	long double ceil(long double x);
+	long double floor(long double x);
+	long double nearbyint(long double x);
+	long double rint(long double x);
+	long rinttol(long double x);
+	long double round(long double x);
+	long roundtol(long double x);
+	int trunc(long double x);
+	long double remainder(long double x, long double y);
+	long double remquo(long double x, long double y, int *quo);
+	long double copysign(long double x, long double y);
+	double nan(const char *tagp);
+	double nextafterd(double x, double y);
+	long double nextafterl(long double x, long double y);
+/*	long double nextafterx(long double x, long double y); */
+	long double fdim(long double x, long double y);
+	long double fmax(long double x, long double y);
+	long double fmin(long double x, long double y);
+
+	// Redirect foo(double) to foo(long double)
+
+	}  // extern "C"
+
+	inline double acos(double x)
+		{return (double)acos((long double)x);}
+	inline double asin(double x)
+		{return (double)asin((long double)x);}
+	inline double atan(double x)
+		{return (double)atan((long double)x);}
+	inline double atan2(double y, double x)
+		{return (double)atan2((long double)y, (long double)x);}
+	inline double cos(double x)
+		{return (double)cos((long double)x);}
+	inline double sin(double x)
+		{return (double)sin((long double)x);}
+	inline double tan(double x)
+		{return (double)tan((long double)x);}
+	inline double cosh(double x)
+		{return (double)cosh((long double)x);}
+	inline double sinh(double x)
+		{return (double)sinh((long double)x);}
+	inline double tanh(double x)
+		{return (double)tanh((long double)x);}
+	inline double acosh(double x)
+		{return (double)acosh((long double)x);}
+	inline double asinh(double x)
+		{return (double)asinh((long double)x);}
+	inline double atanh(double x)
+		{return (double)atanh((long double)x);}
+	inline double exp(double x)
+		{return (double)exp((long double)x);}
+	inline double frexp(double x, int *exp)
+		{return (double)frexp((long double)x, exp);}
+	inline double ldexp(double x, int exp)
+		{return (double)ldexp((long double)x, exp);}
+	inline double log(double x)
+		{return (double)log((long double)x);}
+	inline double log10(double x)
+		{return (double)log10((long double)x);}
+	inline double modf(double x, double *iptr)
+	{
+		long double iptrl;
+		double result = (double)modf((long double)x, &iptrl);
+		*iptr = (double)iptrl;
+		return result;
+	}
+	inline double exp2(double x)
+		{return (double)exp2((long double)x);}
+	inline double expm1(double x)
+		{return (double)expm1((long double)x);}
+	inline double log1p(double x)
+		{return (double)log1p((long double)x);}
+	inline double log2(double x)
+		{return (double)log2((long double)x);}
+	inline double logb(double x)
+		{return (double)logb((long double)x);}
+	inline double scalbn(double x, int n)
+		{return (double)scalb(x, n);}
+	inline double scalbln(double x, long n)
+		{return (double)scalb(x, n);}
+//	inline int ilogb(double x)
+//		{return ilogb((long double)x);}
+	inline double fabs(double x)
+		{return (double)fabs((long double)x);}
+	inline double pow(double x, double y)
+		{return (double)pow((long double)x, (long double)y);}
+	inline double sqrt(double x)
+		{return (double)sqrt((long double)x);}
+//	inline double cbrt(double x)
+//		{return (double)cbrt((long double)x);}
+	inline double hypot(double x, double y)
+		{return (double)hypot((long double)x, (long double)y);}
+	inline double erf(double x)
+		{return (double)erf((long double)x);}
+	inline double erfc(double x)
+		{return (double)erfc((long double)x);}
+	inline double gamma(double x)
+		{return (double)gamma((long double)x);}
+	inline double lgamma(double x)
+		{return (double)lgamma((long double)x);}
+	inline double ceil(double x)
+		{return (double)ceil((long double)x);}
+	inline double floor(double x)
+		{return (double)floor((long double)x);}
+	inline double nearbyint(double x)
+		{return (double)nearbyint((long double)x);}
+	inline double rint(double x)
+		{return (double)rint((long double)x);}
+	inline long int lrint(double x)
+		{return rinttol((long double)x);}
+	inline long long llrint(double x)
+		{return (long long)rint((long double)x);}
+	inline double round(double x)
+		{return (double)round((long double)x);}
+	inline long int lround(double x)
+		{return roundtol((long double)x);}
+	inline long long llround(double x)
+		{return (long long)round((long double)x);}
+	inline double trunc(double x)
+		{return trunc((long double)x);}
+	inline double fmod(double x, double y)
+		{return (double)fmod((long double)x, (long double)y);}
+	inline double remainder(double x, double y)
+		{return (double)remainder((long double)x, (long double)y);}
+	inline double remquo(double x, double y, int *quo)
+		{return (double)remquo((long double)x, (long double)y, quo);}
+	inline double copysign(double x, double y)
+		{return (double)copysign((long double)x, (long double)y);}
+	inline double nextafter(double x, double y)
+		{return nextafterd(x, y);}
+//	inline double nextafterx(double x, long double y)
+//		{return (double)nextafterx((long double)x, (long double)y);}
+	inline double fdim(double x, double y)
+		{return (double)fdim((long double)x, (long double)y);}
+	inline double fmax(double x, double y)
+		{return (double)fmax((long double)x, (long double)y);}
+	inline double fmin(double x, double y)
+		{return (double)fmin((long double)x, (long double)y);}
+//	inline double fma(double x, double y, double z)
+//		{return (double)((long double)x*y + z);}
+
+	extern "C" {
+#endif
+
+/*  foo redirection (everything but 68K) */
+#endif  /*  __FP__  */
+#ifndef __MC68K__
+
+	#ifndef __cplusplus
+
+		#ifdef __POWERPC__
+			double fabs(double x);
+			#define fabs(x) __fabs(x)
+		#endif
+		double scalbn(double x, int n);
+		double scalbln(double x, long n);
+		long int lrint(double x);
+		#ifdef __MSL_LONGLONG_SUPPORT__		/* as 981014 */
+			long long llrint(double x);
+			long long llround(double x);
+		#endif /* __MSL_LONGLONG_SUPPORT__ */
+		long int lround(double x);
+		#if __dest_os == __mac_os
+			double nextafter(double x, double y);
+			#define nextafter(x, y) nextafterd(x, y)
+		#endif
+	/*	double fma(double x, double y, double z); */
+
+		#define scalbn(x, n)  scalb(x, n)
+		#define scalbln(x, n) scalb(x, n)
+		#define lrint(x)      rinttol(x)
+		#ifdef __MSL_LONGLONG_SUPPORT__		/* as 981014 */
+			#define llrint(x)     ((long long)rint(x))
+			#define llround(x)    ((long long)round(x))
+		#endif /* __MSL_LONGLONG_SUPPORT__ */
+		#define lround(x)     roundtol(x)
+	
+	/*	#define fma(x, y, z)  ((double)((long double)(x)*(y) + (z))) */
+
+	#else
+
+		} // extern "C"
+
+		#ifdef __POWERPC__
+			inline double fabs(double x)
+				{return __fabs(x);}
+		#endif
+		inline double scalbn(double x, int n)
+			{return (double)scalb(x, n);}
+		inline double scalbln(double x, long n)
+			{return (double)scalb(x, n);}
+		inline long int lrint(double x)
+			{return rinttol(x);}
+		#ifdef __MSL_LONGLONG_SUPPORT__		/* as 981014 */
+			inline long long llrint(double x)
+				{return (long long)rint(x);}
+			inline long long llround(double x)
+				{return (long long)round(x);}
+		#endif /* __MSL_LONGLONG_SUPPORT__ */		
+		inline long int lround(double x)
+			{return roundtol(x);}
+		#if __dest_os == __mac_os
+			inline double nextafter(double x, double y)
+				{return nextafterd(x, y);}
+		#endif
+	//	inline double fma(double x, double y, double z)
+	//		{return (double)((long double)x*y + z);}
+
+		extern "C" {
+
+	#endif
+
+#endif  /* __FP__ */
+
+#ifdef __MC68K__
+	#if (__dest_os==__mac_os  && defined(__FP__))
+		#ifndef __cplusplus
+			long int lrint(double x);
+			long long llrint(double x);
+			long int lround(double x);
+			#ifdef __MSL_LONGLONG_SUPPORT__		/* as 981014 */
+				long long llround(double x);
+			#endif /* __MSL_LONGLONG_SUPPORT__ */
+		#else
+			inline long int lrint(double x)
+				{return rinttol((long double)x);}
+			#ifdef __MSL_LONGLONG_SUPPORT__		/* as 981014 */	
+				inline long long llrint(double x)
+					{return (long long)rint((long double)x);}
+				inline long long llround(double x)
+					{return (long long)round((long double)x);}
+			#endif /* __MSL_LONGLONG_SUPPORT__ */	
+			inline long int lround(double x)
+				{return roundtol((long double)x);}
+		#endif
+	#endif
+#endif
+
+/*  end foo support  */
+
+/* foof functions */
+
+float modff(float x, float *iptr);
+#if __dest_os == __mac_os
+	float nextafterf(float x, float y);
+#endif
+/*	float nextafterxf(float x, long double y); */
+
+#ifndef __cplusplus
+	/* C foof - redirection support */
+	float acosf(float x);
+	float asinf(float x);
+	float atanf(float x);
+	float atan2f(float y, float x);
+	float cosf(float x);
+	float sinf(float x);
+	float tanf(float x);
+	float coshf(float x);
+	float sinhf(float x);
+	float tanhf(float x);
+	float acoshf(float x);
+	float asinhf(float x);
+	float atanhf(float x);
+	float expf(float x);
+	float frexpf(float x, int *exp);
+	float ldexpf(float x, int exp);
+	float logf(float x);
+	float log10f(float x);
+	float exp2f(float x);
+	float expm1f(float x);
+	float log1pf(float x);
+	float log2f(float x);
+	float logbf(float x);
+	float scalbnf(float x, int n);
+	float scalblnf(float x, long int n);
+/*	int ilogbf(float x); */
+	float fabsf(float x);
+	float powf(float x, float y);
+	float sqrtf(float x);
+/*	float cbrtf(float x); */
+	float hypotf(float x, float y);
+	#ifndef __INTEL__
+		float erff(float x);
+		float erfcf(float x);
+		float gammaf(float x);
+		float lgammaf(float x);
+	#endif
+	float ceilf(float x);
+	float floorf(float x);
+	float nearbyintf(float x);
+	float rintf(float x);
+	long int lrintf(float x);
+	#ifdef __MSL_LONGLONG_SUPPORT__		/* as 981014 */
+		long long llrintf(float x);
+		long long llroundf(float x);
+	#endif /* __MSL_LONGLONG_SUPPORT__ */
+	float roundf(float x);
+	long int lroundf(float x);
+	float truncf(float x);
+	float fmodf(float x, float y);
+	float remainderf(float x, float y);
+	float copysignf(float x, float y);
+	float remquof(float x, float y, int *quo);
+	float fdimf(float x, float y);
+	float fmaxf(float x, float y);
+	float fminf(float x, float y);
+/*	float fmaf(float x, float y, float z); */
+
+	/*  Do some foof optimization  */
+
+	#define acosf(x)           ((float)acos(x))
+	#define asinf(x)           ((float)asin(x))
+	#define atanf(x)           ((float)atan(x))
+	#define atan2f(y, x)       ((float)atan2(y, x))
+	#define cosf(x)            ((float)cos(x))
+	#define sinf(x)            ((float)sin(x))
+	#define tanf(x)            ((float)tan(x))
+	#define coshf(x)           ((float)cosh(x))
+	#define sinhf(x)           ((float)sinh(x))
+	#define tanhf(x)           ((float)tanh(x))
+	#define acoshf(x)          ((float)acosh(x))
+	#define asinhf(x)          ((float)asinh(x))
+	#define atanhf(x)          ((float)atanh(x))
+	#define expf(x)            ((float)exp(x))
+	#define frexpf(x, exp) ((float)frexp(x, exp))
+	#define ldexpf(x, exp)     ((float)ldexp(x, exp))
+	#define logf(x)            ((float)log(x))
+	#define log10f(x)          ((float)log10(x))
+	#define exp2f(x)           ((float)exp2(x))
+	#define expm1f(x)          ((float)expm1(x))
+	#define log1pf(x)          ((float)log1p(x))
+	#define log2f(x)           ((float)log2(x))
+	#define logbf(x)           ((float)logb(x))
+	#define scalbnf(x, n)      ((float)scalb(x, n))
+	#define scalblnf(x, n)     ((float)scalb(x, n))
+/*	#define ilogbf(x)          ilogb(x) */
+	#define fabsf(x)           ((float)fabs(x))
+	#define powf(x, y)         ((float)pow(x, y))
+	#define sqrtf(x)           ((float)sqrt(x))
+/*	#define cbrtf(x)           ((float)cbrt(x)) */
+	#define hypotf(x, y)       ((float)hypot(x, y))
+	#ifndef __INTEL__
+		#define erff(x)            ((float)erf(x))
+		#define erfcf(x)           ((float)erfc(x))
+		#define gammaf(x)          ((float)gamma(x))
+		#define lgammaf(x)         ((float)lgamma(x))
+	#endif
+	#define ceilf(x)           ((float)ceil(x))
+	#define floorf(x)          ((float)floor(x))
+	#define nearbyintf(x)      ((float)nearbyint(x))
+	#define rintf(x)           ((float)rint(x))
+	#define lrintf(x)          lrint(x)
+	#define llrintf(x)         llrint(x)
+	#define roundf(x)          ((float)round(x))
+	#define lroundf(x)         lround(x)
+	#define llroundf(x)        llround(x)
+	#define truncf(x)          ((float)trunc(x))
+	#define fmodf(x, y)        ((float)fmod(x, y))
+	#define remainderf(x, y)   ((float)remainder(x, y))
+	#define copysignf(x, y)    ((float)copysign(x, y))
+	#define remquof(x, y, quo) ((float)remquo(x, y, quo))
+	#define fdimf(x, y)        ((float)fdim(x, y))
+	#define fmaxf(x, y)        ((float)fmax(x, y))
+	#define fminf(x, y)        ((float)fmin(x, y))
+/*	#define fmaf(x, y, z)      ((float)((long double)(x)*(y) + (z))) */
+
+#else
+
+	/* C++ foof - redirection support */
+	
+	} // extern "C"
+	
+	inline float acosf(float x)
+		{return (float)acos((double_t)x);}
+	inline float asinf(float x)
+		{return (float)asin((double_t)x);}
+	inline float atanf(float x)
+		{return (float)atan((double_t)x);}
+	inline float atan2f(float y, float x)
+		{return (float)atan2((double_t)y, (double_t)x);}
+	inline float cosf(float x)
+		{return (float)cos((double_t)x);}
+	inline float sinf(float x)
+		{return (float)sin((double_t)x);}
+	inline float tanf(float x)
+		{return (float)tan((double_t)x);}
+	inline float coshf(float x)
+		{return (float)cosh((double_t)x);}
+	inline float sinhf(float x)
+		{return (float)sinh((double_t)x);}
+	inline float tanhf(float x)
+		{return (float)tanh((double_t)x);}
+	inline float acoshf(float x)
+		{return (float)acosh((double_t)x);}
+	inline float asinhf(float x)
+		{return (float)asinh((double_t)x);}
+	inline float atanhf(float x)
+		{return (float)atanh((double_t)x);}
+	inline float expf(float x)
+		{return (float)exp((double_t)x);}
+	inline float frexpf(float x, int* exp)
+		{return (float)frexp((double_t)x, exp);}
+	inline float ldexpf(float x, int exp)
+		{return (float)ldexp((double_t)x, exp);}
+	inline float logf(float x)
+		{return (float)log((double_t)x);}
+	inline float log10f(float x)
+		{return (float)log10((double_t)x);}
+	inline float exp2f(float x)
+		{return (float)exp2((double_t)x);}
+	inline float expm1f(float x)
+		{return (float)expm1((double_t)x);}
+	inline float log1pf(float x)
+		{return (float)log1p((double_t)x);}
+	inline float log2f(float x)
+		{return (float)log2((double_t)x);}
+	inline float logbf(float x)
+		{return (float)logb((double_t)x);}
+	inline float scalbnf(float x, int n)
+		{return (float)scalb((double_t)x, n);}
+	inline float scalblnf(float x, long int n)
+		{return (float)scalb((double_t)x, n);}
+//	inline int ilogbf(float x)
+//		{return ilogb((double_t)x);}
+	inline float fabsf(float x)
+		{return (float)fabs((double_t)x);}
+	inline float powf(float x, float y)
+		{return (float)pow((double_t)x, (double_t)y);}
+	inline float sqrtf(float x)
+		{return (float)sqrt((double_t)x);}
+//	inline float cbrtf(float x)
+//		{return (float)cbrt((double_t)x);}
+	inline float hypotf(float x, float y)
+		{return (float)hypot((double_t)x, (double_t)y);}
+	#ifndef __INTEL__
+		inline float erff(float x)
+			{return (float)erf((double_t)x);}
+		inline float erfcf(float x)
+			{return (float)erfc((double_t)x);}
+		inline float gammaf(float x)
+			{return (float)gamma((double_t)x);}
+		inline float lgammaf(float x)
+			{return (float)lgamma((double_t)x);}
+	#endif
+	inline float ceilf(float x)
+		{return (float)ceil((double_t)x);}
+	inline float floorf(float x)
+		{return (float)floor((double_t)x);}
+	inline float nearbyintf(float x)
+		{return (float)nearbyint((double_t)x);}
+	inline float rintf(float x)
+		{return (float)rint((double_t)x);}
+	inline long int lrintf(float x)
+		{return lrint((double)x);}
+	#ifdef __MSL_LONGLONG_SUPPORT__
+		inline long long llrintf(float x)
+			{return llrint((double)x);}
+	#endif /* __MSL_LONGLONG_SUPPORT__ */
+	inline float roundf(float x)
+		{return (float)round((double_t)x);}
+	inline long int lroundf(float x)
+		{return lround((double)x);}
+	#ifdef __MSL_LONGLONG_SUPPORT__
+		inline long long llroundf(float x)
+			{return llround((double)x);}
+	#endif /* __MSL_LONGLONG_SUPPORT__ */
+	inline float truncf(float x)
+		{return (float)trunc((double_t)x);}
+	inline float fmodf(float x, float y)
+		{return (float)fmod((double_t)x, (double_t)y);}
+	inline float remainderf(float x, float y)
+		{return (float)remainder((double_t)x, (double_t)y);}
+	inline float copysignf(float x, float y)
+		{return (float)copysign((double_t)x, (double_t)y);}
+	inline float remquof(float x, float y, int *quo)
+		{return (float)remquo((double_t)x, (double_t)y, quo);}
+	inline float fdimf(float x, float y)
+		{return (float)fdim((double_t)x, (double_t)y);}
+	inline float fmaxf(float x, float y)
+		{return (float)fmax((double_t)x, (double_t)y);}
+	inline float fminf(float x, float y)
+		{return (float)fmin((double_t)x, (double_t)y);}
+//	inline float fmaf(float x, float y, float z)
+//		{return (float)((long double)x*y + z);}
+
+	extern "C" {
+
+#endif
+
+/*  end foof support  */
+
+/* fool functions */
+
+#ifndef __cplusplus
+
+	/* C fool - redirection support */
+
+	#if __dest_os == __mac_os && defined(__POWERPC__)
+		long double __acosl(long double x);
+		long double __asinl(long double x);
+		long double __atanl(long double x);
+		long double __atan2l(long double y, long double x);
+		long double __cosl(long double x);
+		long double __sinl(long double x);
+		long double __tanl(long double x);
+		long double __coshl(long double x);
+		long double __sinhl(long double x);
+		long double __tanhl(long double x);
+		long double __acoshl(long double x);
+		long double __asinhl(long double x);
+		long double __atanhl(long double x);
+		long double __expl(long double x);
+		long double __frexpl(long double x, int *exp);
+		long double __ldexpl(long double x, int exp);
+		long double __logl(long double x);
+		long double __log10l(long double x);
+		long double __modfl(long double x, long double *iptr);
+		long double __exp2l(long double x);
+		long double __expm1l(long double x);
+		long double __log1pl(long double x);
+		long double __log2l(long double x);
+		long double __logbl(long double x);
+		long double scalbnl(long double x, int n);
+		long double scalblnl(long double x, long n);
+		/*	int ilogbl(long double x); */
+		long double __fabsl(long double x);
+		long double __powl(long double x, long double y);
+		long double __sqrtl(long double x);
+		/*	long double cbrtl(long double x); */
+		long double __hypotl(long double x, long double y);
+		long double __erfl(long double x);
+		long double __erfcl(long double x);
+		long double __gammal(long double x);
+		long double __lgammal(long double x);
+		long double __ceill(long double x);
+		long double __floorl(long double x);
+		long double __nearbyintl(long double x);
+		long double __rintl(long double x);
+		long int lrintl(long double x);
+		long long llrintl(long double x);
+		long double __roundl(long double x);
+		long int lroundl(long double x);
+		long long llroundl(long double x);
+		long double __truncl(long double x);
+		long double __modfl(long double x, long double* iptr);
+		long double __fmodl(long double x, long double y);
+		long double __remainderl(long double x, long double y);
+		long double __copysignl(long double x, long double y);
+		long double __remquol(long double x, long double y, int *quo);
+		long double __nextafterl(long double x, long double y);
+		/*	long double nextafterxl(long double x, long double y); */
+		long double __fdiml(long double x, long double y);
+		long double __fmaxl(long double x, long double y);
+		long double __fminl(long double x, long double y);
+		/*	long double fmal(long double x, long double y, long double z); */
+
+		/*  Do some fool optimization  */
+
+		#define acosl           __acosl
+		#define asinl           __asinl
+		#define atanl           __atanl
+		#define atan2l          __atan2l
+		#define cosl            __cosl
+		#define sinl            __sinl
+		#define tanl            __tanl
+		#define coshl           __coshl
+		#define sinhl           __sinhl
+		#define tanhl           __tanhl
+		#define acoshl          __acoshl
+		#define asinhl          __asinhl
+		#define atanhl          __atanhl
+		#define expl            __expl
+		#define frexpl          __frexpl
+		#define ldexpl          __ldexpl
+		#define logl            __logl
+		#define log10l          __log10l
+		#define modfl           __modfl
+		#define exp2l           __exp2l
+		#define expm1l          __expm1l
+		#define log1pl          __log1pl
+		#define log2l           __log2l
+		#define logbl           __logbl
+		#define scalbnl(x, n)   scalb((double)(x), n)
+		#define scalblnl(x, n)  scalb((double)(x), n)
+	/*	#define ilogbl(x)       ilogb((double)(x) */
+		#define fabsl           __fabsl
+		#define powl            __powl
+		#define sqrtl           __sqrtl
+	/*	#define cbrtl(x)        cbrt((double)(x)) */
+		#define hypotl          __hypotl
+		#define erfl            __erfl
+		#define erfcl           __erfcl
+		#define gammal          __gammal
+		#define lgammal         __lgammal
+		#define ceill           __ceill
+		#define floorl          __floorl
+		#define nearbyintl      __nearbyintl
+		#define rintl           __rintl
+		#define lrintl(x)       lrint((double)(x))
+		#define llrintl(x)      llrint((double)(x))
+		#define roundl          __roundl
+		#define lroundl(x)      lround((double)(x))
+		#define llroundl(x)     llround((double)(x))
+		#define truncl          __truncl
+		#define fmodl           __fmodl
+		#define remainderl      __remainderl
+		#define copysignl       __copysignl
+		#define remquol         __remquol
+		#define nextafterl      __nextafterl
+	/*	#define nextafterxl(x, y)  nextafterx((double)(x), (double)(y)) */
+		#define fdiml           __fdiml
+		#define fmaxl           __fmaxl
+		#define fminl           __fminl
+	/*	#define fmal(x, y, z)      ((x)*(y) + (z)) */
+	#else
+		long double acosl(long double x);
+		long double asinl(long double x);
+		long double atanl(long double x);
+		long double atan2l(long double y, long double x);
+		long double cosl(long double x);
+		long double sinl(long double x);
+		long double tanl(long double x);
+		long double coshl(long double x);
+		long double sinhl(long double x);
+		long double tanhl(long double x);
+		long double acoshl(long double x);
+		long double asinhl(long double x);
+		long double atanhl(long double x);
+		long double expl(long double x);
+		long double frexpl(long double x, int *exp);
+		long double ldexpl(long double x, int exp);
+		long double logl(long double x);
+		long double log10l(long double x);
+		long double modfl(long double x, long double *iptr);
+		long double exp2l(long double x);
+		long double expm1l(long double x);
+		long double log1pl(long double x);
+		long double log2l(long double x);
+		long double logbl(long double x);
+		long double scalbnl(long double x, int n);
+		long double scalblnl(long double x, long n);
+	/*	int ilogbl(long double x); */
+		long double fabsl(long double x);
+		long double powl(long double x, long double y);
+		long double sqrtl(long double x);
+	/*	long double cbrtl(long double x); */
+		long double hypotl(long double x, long double y);
+		#ifndef __INTEL__
+			long double erfl(long double x);
+			long double erfcl(long double x);
+			long double gammal(long double x);
+			long double lgammal(long double x);
+			long double nextafterl(long double x, long double y);
+		#endif
+		long double ceill(long double x);
+		long double floorl(long double x);
+		long double nearbyintl(long double x);
+		long double rintl(long double x);
+		long int lrintl(long double x);
+		#ifdef __MSL_LONGLONG_SUPPORT__		/* as 981014 */
+			long long llrintl(long double x);
+			long long llroundl(long double x);
+		#endif /* __MSL_LONGLONG_SUPPORT__ */
+		long double roundl(long double x);
+		long int lroundl(long double x);
+		long double truncl(long double x);
+		long double fmodl(long double x, long double y);
+		long double remainderl(long double x, long double y);
+		long double copysignl(long double x, long double y);
+		long double remquol(long double x, long double y, int *quo);
+	/*	long double nextafterxl(long double x, long double y); */
+		long double fdiml(long double x, long double y);
+		long double fmaxl(long double x, long double y);
+		long double fminl(long double x, long double y);
+	/*	long double fmal(long double x, long double y, long double z); */
+
+		/*  Do some fool optimization  */
+
+		#define acosl(x)           acos((double)(x))
+		#define asinl(x)           asin((double)(x))
+		#define atanl(x)           atan((double)(x))
+		#define atan2l(y, x)       atan2((double)(y), (double)(x))
+		#define cosl(x)            cos((double)(x))
+		#define sinl(x)            sin((double)(x))
+		#define tanl(x)            tan((double)(x))
+		#define coshl(x)           cosh((double)(x))
+		#define sinhl(x)           sinh((double)(x))
+		#define tanhl(x)           tanh((double)(x))
+		#define acoshl(x)          acosh((double)(x))
+		#define asinhl(x)          asinh((double)(x))
+		#define atanhl(x)          atanh((double)(x))
+		#define expl(x)            exp((double)(x))
+		#define frexpl(x, exp) frexp((double)(x), exp)
+		#define ldexpl(x, exp)     ldexp((double)(x), exp)
+		#define logl(x)            log((double)(x))
+		#define log10l(x)          log10((double)(x))
+		#ifndef __MC68K__
+			#define modfl(x, iptr) modf((double)(x), (double*)(iptr))
+		#endif
+		#define exp2l(x)           exp2((double)(x))
+		#define expm1l(x)          expm1((double)(x))
+		#define log1pl(x)          log1p((double)(x))
+		#define log2l(x)           log2((double)(x))
+		#define logbl(x)           logb((double)(x))
+		#define scalbnl(x, n)      scalb((double)(x), n)
+		#define scalblnl(x, n)     scalb((double)(x), n)
+	/*	#define ilogbl(x)          ilogb((double)(x) */
+		#define fabsl(x)           fabs((double)(x))
+		#define powl(x, y)         pow((double)(x), (double)(y))
+		#define sqrtl(x)           sqrt((double)(x))
+	/*	#define cbrtl(x)           cbrt((double)(x)) */
+		#define hypotl(x, y)       hypot((double)(x), (double)(y))
+	/*	#define erfl(x)            erf((double)(x)) */
+	/*	#define erfcl(x)           erfc((double)(x)) */
+	/*	#define gammal(x)          gamma((double)(x)) */
+	/*	#define lgammal(x)         lgamma((double)(x)) */
+		#define ceill(x)           ceil((double)(x))
+		#define floorl(x)          floor((double)(x))
+		#define nearbyintl(x)      nearbyint((double)(x))
+		#define rintl(x)           rint((double)(x))
+		#define lrintl(x)          lrint((double)(x))
+		#define llrintl(x)         llrint((double)(x))
+		#define roundl(x)          round((double)(x))
+		#define lroundl(x)         lround((double)(x))
+		#define llroundl(x)        llround((double)(x))
+		#define truncl(x)          trunc((double)(x))
+		#define fmodl(x, y)        fmod((double)(x), (double)(y))
+		#define remainderl(x, y)   remainder((double)(x), (double)(y))
+		#define copysignl(x, y)    copysign((double)(x), (double)(y))
+		#define remquol(x, y, quo) remquo((double)(x), (double)(y), quo)
+	/*	#define nextafterl(x, y)   nextafterd((double)(x), (double)(y)) */
+	/*	#define nextafterxl(x, y)  nextafterx((double)(x), (double)(y)) */
+		#define fdiml(x, y)        fdim((double)(x), (double)(y))
+		#define fmaxl(x, y)        fmax((double)(x), (double)(y))
+		#define fminl(x, y)        fmin((double)(x), (double)(y))
+	/*	#define fmal(x, y, z)      ((x)*(y) + (z)) */
+	#endif
+#else
+	/* C++ fool - redirection support */
+
+	} // extern "C"
+
+	inline long double acosl(long double x)
+		{return acos((double_t)x);}
+	inline long double asinl(long double x)
+		{return asin((double_t)x);}
+	inline long double atanl(long double x)
+		{return atan((double_t)x);}
+	inline long double atan2l(long double y, long double x)
+		{return atan2((double_t)y, (double_t)x);}
+	inline long double cosl(long double x)
+		{return cos((double_t)x);}
+	inline long double sinl(long double x)
+		{return sin((double_t)x);}
+	inline long double tanl(long double x)
+		{return tan((double_t)x);}
+	inline long double coshl(long double x)
+		{return cosh((double_t)x);}
+	inline long double sinhl(long double x)
+		{return sinh((double_t)x);}
+	inline long double tanhl(long double x)
+		{return tanh((double_t)x);}
+	inline long double acoshl(long double x)
+		{return acosh((double_t)x);}
+	inline long double asinhl(long double x)
+		{return asinh((double_t)x);}
+	inline long double atanhl(long double x)
+		{return atanh((double_t)x);}
+	inline long double expl(long double x)
+		{return exp((double_t)x);}
+	inline long double frexpl(long double x, int* exp)
+		{return frexp((double_t)x, exp);}
+	inline long double ldexpl(long double x, int exp)
+		{return ldexp((double_t)x, exp);}
+	inline long double logl(long double x)
+		{return log((double_t)x);}
+	inline long double log10l(long double x)
+		{return log10((double_t)x);}
+	#ifndef __MC68K__
+		inline long double modfl(long double x, long double* iptr)
+		{
+			double iptrd;
+			long double result = modf((double)x, &iptrd);
+			*iptr = iptrd;
+			return result;
+		}
+	#else
+		extern "C" long double modfl(long double x, long double* iptr);
+	#endif
+	inline long double exp2l(long double x)
+		{return exp2((double_t)x);}
+	inline long double expm1l(long double x)
+		{return expm1((double_t)x);}
+	inline long double log1pl(long double x)
+		{return log1p((double_t)x);}
+	inline long double log2l(long double x)
+		{return log2((double_t)x);}
+	inline long double logbl(long double x)
+		{return logb((double_t)x);}
+	inline long double scalbnl(long double x, int n)
+		{return scalb((double_t)x, n);}
+	inline long double scalblnl(long double x, long int n)
+		{return scalb((double_t)x, n);}
+//	inline int ilogbl(long double x)
+//		{return ilogb((double)x);}
+	inline long double fabsl(long double x)
+		{return fabs((double_t)x);}
+	inline long double powl(long double x, long double y)
+		{return pow((double_t)x, (double_t)y);}
+	inline long double sqrtl(long double x)
+		{return sqrt((double_t)x);}
+//	inline long double cbrtl(long double x)
+//		{return cbrt((double)x);}
+	inline long double hypotl(long double x, long double y)
+		{return hypot((double_t)x, (double_t)y);}
+	#ifndef __INTEL__
+		inline long double erfl(long double x)
+			{return erf((double_t)x);}
+		inline long double erfcl(long double x)
+			{return erfc((double_t)x);}
+		inline long double gammal(long double x)
+			{return gamma((double_t)x);}
+		inline long double lgammal(long double x)
+			{return lgamma((double_t)x);}
+	#endif
+	inline long double ceill(long double x)
+		{return ceil((double_t)x);}
+	inline long double floorl(long double x)
+		{return floor((double_t)x);}
+	inline long double nearbyintl(long double x)
+		{return nearbyint((double_t)x);}
+	inline long double rintl(long double x)
+		{return rint((double_t)x);}
+	inline long int lrintl(long double x)
+		{return lrint((double)x);}
+	#ifdef __MSL_LONGLONG_SUPPORT__
+		inline long long llrintl(long double x)
+			{return llrint((double)x);}
+	#endif /* __MSL_LONGLONG_SUPPORT__ */
+	inline long double roundl(long double x)
+		{return round((double_t)x);}
+	inline long int lroundl(long double x)
+		{return lround((double)x);}
+	#ifdef __MSL_LONGLONG_SUPPORT__
+		inline long long llroundl(long double x)
+			{return llround((double)x);}
+	#endif /* __MSL_LONGLONG_SUPPORT__ */
+	inline long double truncl(long double x)
+		{return trunc((double_t)x);}
+	inline long double fmodl(long double x, long double y)
+		{return fmod((double_t)x, (double_t)y);}
+	inline long double remainderl(long double x, long double y)
+		{return remainder((double_t)x, (double_t)y);}
+	inline long double copysignl(long double x, long double y)
+		{return copysign((double_t)x, (double_t)y);}
+	inline long double remquol(long double x, long double y, int *quo)
+		{return remquo((double_t)x, (double_t)y, quo);}
+	#if __dest_os == __mac_os && defined(__POWERPC__)
+		inline long double nextafterl(long double x, long double y)
+			{return nextafterd((double)x, (double)y);}
+	#endif
+	inline long double fdiml(long double x, long double y)
+		{return fdim((double_t)x, (double_t)y);}
+	inline long double fmaxl(long double x, long double y)
+		{return fmax((double_t)x, (double_t)y);}
+	inline long double fminl(long double x, long double y)
+		{return fmin((double_t)x, (double_t)y);}
+//	inline long double fmal(long double x, long double y, long double z)
+//		{return x*y + z;}
+
+	extern "C" {
+
+#endif
+
+/*  end fool support  */
+
+#ifdef __cplusplus
+
+	} // extern "C"
+
+	inline float abs(float x)
+		{return fabsf(x);}
+	inline double abs(double x)
+		{return fabs(x);}
+	inline long double abs(long double x)
+		{return fabsl(x);}
+	
+	extern "C" {
+
+#endif
+
+#if defined(__cplusplus) && defined(__ANSI_OVERLOAD__)
+
+	} // extern "C"
+
+	//  foo(float) support 
+
+	inline float acos(float x)
+		{return acosf(x);}
+	inline float asin(float x)
+		{return asinf(x);}
+	inline float atan(float x)
+		{return atanf(x);}
+	inline float atan2(float y, float x)
+		{return atan2f(y, x);}
+	inline float cos(float x)
+		{return cosf(x);}
+	inline float sin(float x)
+		{return sinf(x);}
+	inline float tan(float x)
+		{return tanf(x);}
+	inline float cosh(float x)
+		{return coshf(x);}
+	inline float sinh(float x)
+		{return sinhf(x);}
+	inline float tanh(float x)
+		{return tanhf(x);}
+	inline float acosh(float x)
+		{return acoshf(x);}
+	inline float asinh(float x)
+		{return asinhf(x);}
+	inline float atanh(float x)
+		{return atanhf(x);}
+	inline float exp(float x)
+		{return expf(x);}
+	inline float frexp(float x, int* exp)
+		{return frexpf(x, exp);}
+	inline float ldexp(float x, int exp)
+		{return ldexpf(x, exp);}
+	inline float log(float x)
+		{return logf(x);}
+	inline float log10(float x)
+		{return log10f(x);}
+	inline float modf(float x, float* y)
+		{return modff(x, y);}
+	inline float exp2(float x)
+		{return exp2f(x);}
+	inline float expm1(float x)
+		{return expm1f(x);}
+	inline float log1p(float x)
+		{return log1pf(x);}
+	inline float log2(float x)
+		{return log2f(x);}
+	inline float logb(float x)
+		{return logbf(x);}
+	inline float scalbn(float x, int n)
+		{return scalbnf(x, n);}
+	inline float scalbln(float x, long int n)
+		{return scalblnf(x, n);}
+//	inline int ilogb(float x)
+//		{return ilogbf(x);}
+	inline float fabs(float x)
+		{return fabsf(x);}
+	inline float pow(float x, float y)
+		{return powf(x, y);}
+	inline float pow(float x, int y)
+		{return powf(x, y);}
+	inline float sqrt(float x)
+		{return sqrtf(x);}
+//	inline float cbrt(float x)
+//		{return cbrtf(x);}
+	inline float hypot(float x, float y)
+		{return hypotf(x, y);}
+	#ifndef __INTEL__
+		inline float erf(float x)
+			{return erff(x);}
+		inline float erfc(float x)
+			{return erfcf(x);}
+		inline float gamma(float x)
+			{return gammaf(x);}
+		inline float lgamma(float x)
+			{return lgammaf(x);}
+		inline float nextafter(float x, float y)
+			{return nextafterf(x, y);}
+	#endif
+	inline float ceil(float x)
+		{return ceilf(x);}
+	inline float floor(float x)
+		{return floorf(x);}
+	inline float nearbyint(float x)
+		{return nearbyintf(x);}
+	inline float rint(float x)
+		{return rintf(x);}
+	inline long int lrint(float x)
+		{return lrintf(x);}
+	inline long long llrint(float x)
+		{return llrintf(x);}
+	inline float round(float x)
+		{return roundf(x);}
+	inline long int lround(float x)
+		{return lroundf(x);}
+	inline long long llround(float x)
+		{return llroundf(x);}
+	inline float trunc(float x)
+		{return truncf(x);}
+	inline float fmod(float x, float y)
+		{return fmodf(x, y);}
+	inline float remainder(float x, float y)
+		{return remainderf(x, y);}
+	inline float copysign(float x, float y)
+		{return copysignf(x, y);}
+	inline float remquo(float x, float y, int *quo)
+		{return remquof(x, y, quo);}
+//	inline float nextafterx(float x, long double y)
+//		{return nextafterxf(x, y);}
+	inline float fdim(float x, float y)
+		{return fdimf(x, y);}
+	inline float fmax(float x, float y)
+		{return fmaxf(x, y);}
+	inline float fmin(float x, float y)
+		{return fminf(x, y);}
+//	inline float fma(float x, float y, float z)
+//		{return fmaf(x, y, z);}
+
+	//  foo(long double) support 
+	
+	inline long double scalbn(long double x, int n)
+		{return scalbnl(x, n);}
+	inline long double scalbln(long double x, long int n)
+		{return scalblnl(x, n);}
+	inline long int lrint(long double x)
+		{return lrintl(x);}
+	inline long long llrint(long double x)
+		{return llrintl(x);}
+	inline long int lround(long double x)
+		{return lroundl(x);}
+	inline long long llround(long double x)
+		{return llroundl(x);}
+//	inline long double fma(long double x, long double y, long double z)
+//		{return fmal(x, y, z);}
+	#ifndef __INTEL__
+		inline long double nextafter(long double x, long double y)
+			{return nextafterl(x, y);}
+	#endif
+	#ifndef __MC68K__
+		inline long double acos(long double x)
+			{return acosl(x);}
+		inline long double asin(long double x)
+			{return asinl(x);}
+		inline long double atan(long double x)
+			{return atanl(x);}
+		inline long double atan2(long double y, long double x)
+			{return atan2l(y, x);}
+		inline long double cos(long double x)
+			{return cosl(x);}
+		inline long double sin(long double x)
+			{return sinl(x);}
+		inline long double tan(long double x)
+			{return tanl(x);}
+		inline long double cosh(long double x)
+			{return coshl(x);}
+		inline long double sinh(long double x)
+			{return sinhl(x);}
+		inline long double tanh(long double x)
+			{return tanhl(x);}
+		inline long double acosh(long double x)
+			{return acoshl(x);}
+		inline long double asinh(long double x)
+			{return asinhl(x);}
+		inline long double atanh(long double x)
+			{return atanhl(x);}
+		inline long double exp(long double x)
+			{return expl(x);}
+		inline long double frexp(long double x, int* exp)
+			{return frexpl(x, exp);}
+		inline long double ldexp(long double x, int exp)
+			{return ldexpl(x, exp);}
+		inline long double log(long double x)
+			{return logl(x);}
+		inline long double log10(long double x)
+			{return log10l(x);}
+		inline long double modf(long double x, long double* y)
+			{return modfl(x, y);}
+		inline long double exp2(long double x)
+			{return exp2l(x);}
+		inline long double expm1(long double x)
+			{return expm1l(x);}
+		inline long double log1p(long double x)
+			{return log1pl(x);}
+		inline long double log2(long double x)
+			{return log2l(x);}
+		inline long double logb(long double x)
+			{return logbl(x);}
+	//	inline int ilogb(long double x)
+	//		{return ilogbl(x);}
+		inline long double fabs(long double x)
+			{return fabsl(x);}
+		inline long double pow(long double x, long double y)
+			{return powl(x, y);}
+		inline long double pow(long double x, int y)
+			{return powl(x, y);}
+		inline long double sqrt(long double x)
+			{return sqrtl(x);}
+	//	inline long double cbrt(long double x)
+	//		{return cbrtl(x);}
+		inline long double hypot(long double x, long double y)
+			{return hypotl(x, y);}
+		#ifndef __INTEL__
+			inline long double erf(long double x)
+				{return erfl(x);}
+			inline long double erfc(long double x)
+				{return erfcl(x);}
+			inline long double gamma(long double x)
+				{return gammal(x);}
+			inline long double lgamma(long double x)
+				{return lgammal(x);}
+		#endif
+		inline long double ceil(long double x)
+			{return ceill(x);}
+		inline long double floor(long double x)
+			{return floorl(x);}
+		inline long double nearbyint(long double x)
+			{return nearbyintl(x);}
+		inline long double rint(long double x)
+			{return rintl(x);}
+		inline long double round(long double x)
+			{return roundl(x);}
+		inline long double trunc(long double x)
+			{return truncl(x);}
+		inline long double fmod(long double x, long double y)
+			{return fmodl(x, y);}
+		inline long double remainder(long double x, long double y)
+			{return remainderl(x, y);}
+		inline long double copysign(long double x, long double y)
+			{return copysignl(x, y);}
+		inline long double remquo(long double x, long double y, int *quo)
+			{return remquol(x, y, quo);}
+	//	inline long double nextafterx(long double x, long double y)
+	//		{return nextafterxl(x, y);}
+		inline long double fdim(long double x, long double y)
+			{return fdiml(x, y);}
+		inline long double fmax(long double x, long double y)
+			{return fmaxl(x, y);}
+		inline long double fmin(long double x, long double y)
+			{return fminl(x, y);}
+	#endif
+	extern "C" {
+
+#endif
+
+#ifdef __cplusplus
+	}
+	#ifdef _MSL_USING_NAMESPACE
+		}
+	#endif
+#endif
+
+
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import reset
+#endif
+#pragma options align=reset
+
+#ifdef __INTEL__
+	#pragma k63d_calls reset
+#endif
+
+#endif /*__cmath__*/
+
+/*     Change record
+mm-960722       Inserted declaration for pi
+mm-9607225  	Added declaration for pi for Infinity Marathon.
+mm-961008       Removed declaration for pi since it does not conform to the ANSI C Standard
+bk-961221		line 121 wrapped fabs intrinsic (mmoss)
+bk 961223 		line 24 wrapped HUGE_VAL define
+bk 970318		restructured for 68K, PPC, x86 to reduce confusion
+bk 970410		restructured more to reduce 68K mess, started to add C9X support
+bk 970411		added long double support for PPC cplus plus, 68K cplus plus and c
+bk 970415		68K changes
+bk 970423		c++ long double overrides replaced with casts to double versions
+mf 970902       took out all c++ inlines for math functions on all platforms. They don't do 
+                anything!  Still have fpu inlines on 68k with either C or C++ .
+mf 970915       corrected a bug that defines regular math functions to the "d" suffixed 
+                macros on 68K.  They should only be defined for 8 byte doubles
+mf 970916		moved __extern_c to surround long __double_huge[]                
+mf 970928       define efficiency types double_t, float_t by default(used to require
+                __MSL_C9X__ to be defined).
+mf 971005       updated math.h to be compatible with 3.0.1 universal headers. Removed
+                __MSL_C9X__ altogether.   
+mf  97120297    completed X86 classification macros/functions isnormal/fpclassify/signbit and
+                enumerated types FP_NAN etc....
+
+mf  97120297    put parenthesis around classification macros(currently used on the MAC only)                                           
+hh  971206      many many changes for namespace support.  Including file name change.
+hh  971217      "extern C" must appear inside of namespace {}
+hh  971230      added RC_INVOKED wrapper
+hh 980122       ppc does not have fmodl, #defined it to fmod
+hh 980122       Added C++ inlines
+hh 980217       Put most of the inlines added 980122 under #ifdef __ANSI_OVERLOAD__.  The
+                customer is free to turn this switch on and off to access or hide these
+                functions.  Please see <ansi_parms.h> for more details.
+mf 980305       fixed some problems with C++ inlines. added standard prototype for nextafter                
+rjk 980316		turned off k63d_calls for intel compiler
+hh 980628       rewrote
+vss 980809      __double_huge, et al, need to be in extern C clause too
+mf  980811      wrap everyting in fp.h  __FP__, changed dest_os!=__win32_os to __INTEL__, nan prototype for intel enabled
+mf  980813      added comparison macros for intel fpu
+as	981014		bracketed long long support
+*/

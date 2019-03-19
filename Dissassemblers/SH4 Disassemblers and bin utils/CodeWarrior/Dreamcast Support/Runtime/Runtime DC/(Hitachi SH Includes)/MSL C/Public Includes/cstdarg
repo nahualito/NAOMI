@@ -1,0 +1,78 @@
+/*  Metrowerks Standard Library  Version 4.0  1998 August 10  */
+
+/*  $Date:: 6/5/98 2:32 PM                                   $ 
+ *  $Revision:: 5                                            $ 
+ *  $NoKeywords: $ 
+ *
+ *		Copyright © 1995-1998 Metrowerks, Inc.
+ *		All rights reserved.
+ */
+
+/*
+ *	cstdarg         hh  971206  filename used to be stdarg.h
+ */
+ 
+#ifndef __cstdarg__
+#define __cstdarg__
+
+#include <ansi_parms.h>
+
+#include <va_list.h>
+
+#ifndef RC_INVOKED   /* hh 971230 */
+
+#pragma options align=native
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import on
+#endif
+
+#ifdef __cplusplus      /* hh  971206 */
+	#ifdef _MSL_USING_NAMESPACE
+		namespace std {
+	#endif
+	extern "C" {
+#endif
+
+#define va_start(ap, parm)	ap = __va_start(parm)
+#define va_end(ap)
+
+#if __INTEL__
+
+#define __va_start(parm)	(__std(va_list)) ((long)(&parm) + \
+							((((long)(&parm + 1) - (long)(&parm))+3)/4*4))  /* mm 9708027 */
+#define _Align(type, mask) (sizeof(type) + (mask) & ~(mask))
+#define va_arg(ap, type)	(* (type *) (((ap) += _Align(type, 3)) - _Align(type, 3)))
+
+#elif	__POWERPC__ && (__dest_os	==	__mac_os)  /*for PowerMac 32bit calling conventions only*/
+#define __va_start(parm)	(__std(va_list)) (&parm + 1)  /* mm 9708027 */
+#define va_arg(ap, type)  (*       (((type *) (ap += (((sizeof(type)+3)/4)*4) )) -1)        )
+
+#else
+
+#define __va_start(parm)	(__std(va_list)) ((char *)&parm + (sizeof (parm) + (1U) & ~(1U)))  /* mm 9708027 */
+#define va_arg(ap, type)	(*       (((type *) (ap += sizeof(type))) - 1)        )
+
+#endif
+
+#ifdef __cplusplus         /* hh  971206 */
+	}
+	#ifdef _MSL_USING_NAMESPACE
+		}
+	#endif
+#endif
+
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import reset
+#endif
+#pragma options align=reset
+
+#endif /* RC_INVOKED */
+
+#endif /* __cstdarg__ */
+/*     Change record
+961015	bkoz	change to va_arg according to BR ES56366 (J. Pratt)
+061216	KO		Fixed va_start for Intel.
+mm 9708027      Fixed va_start to allow for unsigned char arguments.  BR7931
+hh  971206      Changed filename from stdarg.h to cstdarg and added namespace support.
+hh 971230       added RC_INVOKED wrapper
+*/

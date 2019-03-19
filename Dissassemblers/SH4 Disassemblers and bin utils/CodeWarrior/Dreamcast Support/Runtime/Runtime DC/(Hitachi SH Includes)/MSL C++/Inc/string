@@ -1,0 +1,2185 @@
+/*  Metrowerks Standard Library  Version 4.0  1998 August 10  */
+
+/*  $Date:: 6/18/98 12:28 PM                                 $ 
+ *  $Revision:: 13                                           $ 
+ *  $NoKeywords: $ 
+ *
+ *		Portions Copyright © 1995-1998 Metrowerks, Inc.
+ *		All rights reserved.
+ */
+ 
+/**
+ **  string       // hh 971226 file name changed from bstring.h to string
+ **
+ **  Lib++  : The Modena C++ Standard Library, 
+ **           Version 2.4, October 1997
+ **
+ **  Copyright (c) 1995-1997 Modena Software Inc.
+ **/
+
+#ifndef _STRING        // hh 971226 made include guards standard
+#define _STRING
+
+#include <mcompile.h>
+
+#include <cstdio>    // hh 971220 fixed MOD_C_INCLUDE
+#include <cctype>    // hh 971220 fixed MOD_C_INCLUDE
+#include <cstring>   // hh 971220 fixed MOD_C_INCLUDE
+
+#ifdef MSIPL_WCHART
+#include <cwchar>    // hh 971220 fixed MOD_C_INCLUDE
+#include <cwctype>   // hh 971220 fixed MOD_C_INCLUDE
+#endif
+
+#include <iosfwd>    // hh 971220 fixed MOD_INCLUDE
+#include <memory>    // hh 971220 fixed MOD_INCLUDE
+#include <mutex.h>   // hh 971220 fixed MOD_INCLUDE
+#include <algorithm> // hh 971226 added
+
+#ifdef MSIPL_ANSI_HEADER
+#include <stdexcept> // hh 971220 fixed MOD_INCLUDE
+#else
+#include <mexcept.h> // hh 971220 fixed MOD_INCLUDE
+#endif
+
+#ifndef RC_INVOKED // hh 971230
+
+#define THR_LEN MSIPL_THROW_ME(length_error, "Length exception occurred")
+#define THR_RANGE MSIPL_THROW_ME(out_of_range, "Out of range exception occurred")
+#define DEFSZ 32
+
+#pragma options align=native
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import on
+#endif
+
+#ifdef MSIPL_USING_NAMESPACE
+	namespace std {
+#endif
+
+class ios_base;
+template <class charT> class ctype;
+
+template<class charT> struct char_traits{};
+
+typedef int fstate_t;
+
+#ifdef MSIPL_WCHART
+typedef long wstreamoff;
+#endif
+
+class streampos
+{
+public:
+    streampos (streamoff off_arg=0, fstate_t fst_arg=0)
+    : off (off_arg), fst (fst_arg), fpt (0) 
+    {    }
+
+    streampos (const streampos& rhs)
+    : off (rhs.off), fst (rhs.fst), fpt (rhs.fpt) 
+    {    }
+
+    streamoff offset () const 
+    { 
+        return off; 
+    }
+
+    fstate_t state () const 
+    { 
+        return fst; 
+    }
+
+    streampos& operator= (const streampos& rhs)
+    {
+       if (this != &rhs)
+       {
+          off=rhs.off;
+          fst=rhs.fst;
+          fpt=rhs.fpt;
+       }
+       return *this;
+    }
+
+    streamoff operator- (const streampos& rhs) const
+    { 
+        return ( (off == -1 || rhs.off == -1)  ?  -1 : off - rhs.off); 
+    }
+
+    streampos& operator += (streamoff off_arg)
+    { 
+        off += off_arg; 
+        return *this; 
+    }
+
+    streampos& operator -= (streamoff off_arg)
+    { 
+        off -= off_arg; 
+        return *this; 
+    }
+
+    streampos operator+ (streamoff off_arg) const
+    { 
+        streampos  tmp (*this); 
+        return (tmp += off_arg); 
+    }    
+
+    streampos operator- (streamoff off_arg) const
+    { 
+        streampos  tmp (*this); 
+        return (tmp -= off_arg); 
+    }
+
+    bool operator == (const streampos& rhs) const
+    {
+        if ( (off == -1) || (rhs.off == -1)) 
+            return (off == rhs.off);
+        else
+            return ( (off == rhs.off) && (fpt == rhs.fpt) &&
+                   (fst  == rhs.fst));
+    }
+
+    bool operator != (const streampos& rhs) const
+    { 
+        return (!(*this == rhs)); 
+    }
+
+private:
+    streamoff    off;
+    fpos_t       fpt;
+    fstate_t     fst;
+};
+
+#ifdef MSIPL_WCHART
+class  wstreampos 
+{
+public:
+    wstreampos (const wstreampos& pos_arg, mbstate_t fst_arg)
+    : off (pos_arg.off), fst (fst_arg) 
+    {    }
+
+    wstreampos (wstreamoff off_arg, mbstate_t fst_arg)
+    : off (off_arg), fst (fst_arg) 
+    {    }
+
+    wstreampos (wstreamoff off_arg=0)
+    : off (off_arg) 
+    {    }
+
+    wstreampos (const wstreampos& rhs)
+    : off (rhs.off), fst (rhs.fst), fpt (rhs.fpt) 
+    {    }
+
+    wstreamoff offset () const 
+    { 
+        return off; 
+    }
+
+    mbstate_t state () const 
+    { 
+        return fst; 
+    }
+
+    wstreampos& operator= (wstreampos& rhs)
+    {
+       if (this != &rhs)
+       {
+          off=rhs.off;
+          fst=rhs.fst;
+          fpt=rhs.fpt;
+       }
+       return *this;
+    }
+
+    wstreamoff   operator- (wstreampos& rhs) const
+    {
+       return ( (off == -1 || rhs.off == -1)  ?  -1 :
+                off - rhs.off);
+    }
+
+    wstreampos&  operator += (wstreamoff off_arg)
+    { 
+        off += off_arg; return *this; 
+    }
+ 
+    wstreampos&  operator -= (wstreamoff off_arg)
+    { 
+        off -= off_arg; 
+        return *this; 
+    }
+ 
+    wstreampos   operator+ (wstreamoff off_arg) const
+    { 
+        wstreampos  tmp (*this); 
+        return (tmp += off_arg); 
+    }
+
+    wstreampos   operator- (wstreamoff off_arg) const
+    { 
+        wstreampos  tmp (*this); 
+        return (tmp -= off_arg); 
+    }
+ 
+    bool operator == (const wstreampos& rhs) const
+    {
+        if ( (off == -1) || (rhs.off == -1))
+            return (off == rhs.off);
+        else
+            return ( (off == rhs.off) && (fpt == rhs.fpt) &&
+                   (fst  == rhs.fst));
+    }
+ 
+    bool operator != (const wstreampos& rhs) const
+    {
+        return (!(*this == rhs)); 
+    }
+ 
+private:
+     wstreamoff   off;      // absolute position within the sequence
+     fpos_t       fpt;
+     mbstate_t    fst;      // conversion state
+};
+#endif
+         
+null_template
+struct char_traits<char> 
+{
+    typedef char      char_type;
+    typedef int       int_type;
+    typedef streampos pos_type;
+    typedef streamoff off_type;
+    typedef fstate_t  state_type;
+    
+    static void assign (char_type& c1, const char_type& c2)
+    {
+        c1 = c2;
+    }
+
+    static bool eq (const char_type& c1, const char_type& c2)
+    {
+        return (c1 == c2);
+    }
+
+    static bool lt (const char_type& c1, const char_type& c2)
+    {
+        return (c1 < c2);
+    }
+
+    static int compare (const char_type* s1, const char_type* s2, size_t n) 
+    {
+        return memcmp (s1, s2, n);  // hh 971221 ::scope deleted here
+    }
+
+    static size_t length (const char_type* s)
+    {
+        return (s ? strlen (s): 0);  // hh 971221 ::scope deleted here
+    }
+
+    static char_type* copy (char_type* s1, const char_type* s2, size_t n) 
+    {
+       return (char_type*)memcpy (s1, s2, n);  // hh 971221 ::scope deleted here
+    }
+
+    static const char_type* find (const char_type* s, size_t n, const char_type& a)
+    {
+        return (const char_type*)memchr (s, (unsigned char)a, n);  // hh 971221 ::scope deleted here
+    }
+
+    static char_type* move (char_type* s1, const char_type* s2, size_t n)
+    {
+        return (char_type*)memmove (s1, s2, n);  // hh 971221 ::scope deleted here
+    }
+
+    static char_type* assign (char_type* s, size_t n, char_type a)
+    {
+        return (char_type*)memset (s, a, n);  // hh 971221 ::scope deleted here
+    }
+
+    static int_type not_eof (const int_type& c)
+    {
+        return (!eq_int_type (c, eof ()) ? c: ~c);
+    }
+
+    static char_type to_char_type (const int_type& c)
+    {
+        return (eq_int_type (c, to_int_type (char_type(c))) ? char_type(c) : char_type());
+    }
+
+    static int_type to_int_type (const char_type& c)
+    {
+#ifdef MSIPL_UCHAR
+        return ( (c+1) & 0xFF) - 1;
+#else
+        return (unsigned char) c;
+#endif
+    }
+
+    static bool eq_int_type (const int_type& c1, const int_type& c2)
+    {
+        return (c1 == c2);
+    }
+
+    static state_type get_state (pos_type pos)
+    {
+        return pos.state ();
+    }
+
+    static pos_type get_pos (pos_type pos, state_type state) 
+    {
+        return pos_type (pos.offset (), state);
+    }
+
+    static int_type eof ()
+    {
+        return EOF;
+    }
+
+    static char_type eos ()
+    {
+        return 0;
+    }
+
+    static char_type newline ()
+    { 
+        return '\n';
+    }
+};
+
+#ifdef MSIPL_WCHART
+null_template
+struct char_traits<wchar_t>
+{
+    typedef wchar_t         char_type;
+    typedef wint_t          int_type;
+    typedef wstreampos      pos_type;
+    typedef wstreamoff      off_type;
+    typedef mbstate_t       state_type;
+
+    static void assign (char_type& c1, const char_type& c2)
+    {
+            c1 = c2;
+    }
+
+    static bool eq (const char_type& c1, const char_type& c2)
+    {
+        return c1 == c2;
+    }
+
+    static bool lt (const char_type& c1, const char_type& c2)
+    {
+        return c1 < c2;    
+    }
+
+    static int compare (const char_type* s1, const char_type* s2, size_t n) 
+    {
+        return wmemcmp (s1, s2, n);  // hh 971221 ::scope deleted here
+    }
+
+    static size_t length (const char_type* s)
+    {
+        return (s ? wcslen (s): 0);  // hh 971221 ::scope deleted here
+    }
+
+    static char_type* copy (char_type* s1, const char_type* s2, size_t n) 
+    {
+        return (char_type*)wmemcpy (s1, s2, n);  // hh 971221 ::scope deleted here
+    }
+
+    static const char_type* find (const char_type* s, size_t n, const char_type& a)
+    {
+        return (const char_type*)wmemchr (s, a, n);  // hh 971221 ::scope deleted here
+    }
+
+    static char_type* move (char_type* s1, const char_type* s2, size_t n)
+    {
+        return (char_type*)wmemmove (s1, s2, n);  // hh 971221 ::scope deleted here
+    }
+
+    static char_type* assign (char_type* s, size_t n, char_type a)
+    {
+        return (char_type*)wmemset (s, a, n);  // hh 971221 ::scope deleted here
+    }
+
+    static int_type not_eof (const int_type& c)
+    {
+        return (!eq (c, eof ()) ? c: ~c);
+    }
+
+    static char_type to_char_type (const int_type& c)
+    {
+        return (eq_int_type (c, to_int_type (c)) ? c: (char_type)0);
+    }
+
+    static int_type to_int_type (const char_type& c)
+    {
+        return (int_type) c;
+    }
+
+    static bool eq_int_type (const int_type& c1, const int_type& c2)
+    {
+        return (c1 == c2);
+    }
+
+    static state_type get_state (pos_type pos)
+    {
+        return pos.state ();
+    }
+
+    static pos_type get_pos (pos_type pos, state_type state) 
+    { 
+        return pos_type (pos.offset (), state); 
+    }
+
+    static int_type eof ()
+    {
+        return WEOF;
+    }
+
+    static char_type eos ()
+    {
+        return 0;
+    }
+
+    static char_type newline ()
+    {
+        return L'\n';
+    }
+};
+#endif /* MSIPL_WCHART */
+
+template <class charT, class DEFTEMPARG (traits, char_traits<charT>), 
+          class DEFTEMPARG (Allocator, allocator<charT>) >
+class basic_string;
+
+template<class charT, class DEFTEMPARG (traits, char_traits<charT>), 
+         class DEFTEMPARG (Allocator, allocator<charT>) >
+class b_str_ref
+{
+     typedef typename Allocator::pointer pointer;
+     typedef typename Allocator::size_type size_type;
+
+     friend class basic_string<charT, traits, Allocator>; 
+
+     ALLOC_BIND (charT)    string_allocator;
+     size_type             count;
+     pointer               start;
+     size_type             strsize;
+     size_type             bufsize;
+     DEC_OBJ_LOCK(_mutex)
+
+     b_str_ref (const Allocator& alloc=Allocator ())
+      : count (1), string_allocator (alloc)
+     { }
+
+     b_str_ref (const charT* s, size_type n, 
+               const Allocator& alloc = Allocator ())
+     : count (1), string_allocator (alloc)
+     {
+          start = string_allocator.allocate (bufsize = (n / DEFSZ + 1) * DEFSZ);
+          strsize = n;  // hh 971226 moved strsize assignment out of if
+          if ( strsize != 0 && s)
+               traits::copy (start, s, n);
+          traits::assign (*(start + n), traits::eos ());
+     }
+
+     ~b_str_ref ();
+};
+
+template<class charT, class traits, class Allocator>
+inline
+b_str_ref<charT, traits, Allocator>::~b_str_ref ()
+{
+	if (start)
+		string_allocator.deallocate (start, bufsize);
+}
+
+template<class charT, class traits, class Allocator>
+class basic_string
+{
+     typedef b_str_ref<charT, traits, Allocator> buff_t;
+     typedef ALLOC_BIND (buff_t)                  buff_t_alloc_type;
+
+     buff_t* bfr;
+//     static buff_t *nullbuf;  // hh 980113 Removed, see below
+
+public:
+     typedef traits                                   traits_type;
+     typedef typename traits::char_type               value_type;
+     typedef Allocator                                allocator_type;
+     typedef typename allocator_type::size_type       size_type;
+     typedef typename allocator_type::difference_type difference_type;
+     typedef typename allocator_type::reference       reference;
+     typedef typename allocator_type::const_reference const_reference;
+     typedef typename allocator_type::pointer         pointer;
+     typedef typename allocator_type::const_pointer   const_pointer;
+     typedef pointer                                  iterator;
+     typedef const_pointer                            const_iterator;
+     typedef reverse_iterator<const_iterator>         const_reverse_iterator;
+     typedef reverse_iterator<iterator>               reverse_iterator;
+     static const size_type npos;    //Static Data Member  // hh 971226 moved up
+
+     explicit basic_string (const Allocator& alloc = Allocator ()); // hh 980507 uninlined
+
+     basic_string (const basic_string& str, size_type pos = 0, 
+                         size_type n = npos, const Allocator& = Allocator ());
+     basic_string (const charT* s, size_type n, const Allocator& = Allocator ());
+     basic_string (const charT* s, const Allocator& = Allocator ());
+     basic_string (size_type n, charT c, const Allocator& = Allocator ());
+
+	#ifdef MSIPL_MEMBER_TEMPLATE  // hh 980713 Temporarily moved into class definition to support compiler
+	template<class InputIterator>
+	//inline  // hh 980129
+	basic_string (InputIterator begin, InputIterator end, const Allocator& alloc = Allocator ())
+	{
+	     size_type n = size_type(end - begin);
+	     if (n >= npos) THR_RANGE
+	     if (!(bfr = new buff_t (begin, n, alloc)))
+	          THROW_BAD_ALLOC
+	}
+
+	#else
+
+	//inline  // hh 980129
+	basic_string (const_iterator begin, const_iterator end, const Allocator& alloc = Allocator ())
+	{
+	     size_type n = size_type(end-begin);
+	     if (n >= npos)THR_RANGE
+	     if (!(bfr=new buff_t (begin, n, alloc)))
+	          THROW_BAD_ALLOC
+	}
+	#endif
+
+     ~basic_string ();  // hh 980129 un-inlined
+
+     basic_string& operator= (const basic_string& str);  // hh 980129 un-inlined
+     basic_string& operator= (const charT* s);           // hh 980129 un-inlined
+     basic_string& operator= (charT c);                  // hh 980129 un-inlined
+
+     iterator begin();  // hh 980507 uninlined
+
+     const_iterator begin () const
+     { 
+          SREAD_LOCK(bfr->_mutex);
+          return bfr->start;
+     }
+
+     iterator end();  // hh 980507 uninlined
+
+     const_iterator end () const
+     {
+          SREAD_LOCK(bfr->_mutex);
+          return (bfr->start + bfr->strsize);
+     }
+
+     reverse_iterator rbegin ()
+     {
+          return reverse_iterator (end ());  // hh 980126 removed () around reverse_iterator (4 places)
+     }
+
+     const_reverse_iterator rbegin () const
+     { 
+          return const_reverse_iterator (end ());
+     }
+
+     reverse_iterator rend ()
+     { 
+          return reverse_iterator (begin ());
+     }
+
+     const_reverse_iterator rend () const
+     { 
+          return const_reverse_iterator (begin ());
+     }
+
+     size_type size () const
+     { 
+          SREAD_LOCK(bfr->_mutex);
+          return bfr->strsize;
+     }
+
+     size_type length () const
+     { 
+          SREAD_LOCK(bfr->_mutex);
+          return bfr->strsize;
+     }
+
+     size_type max_size () const
+     { 
+          SREAD_LOCK(bfr->_mutex);
+          return bfr->string_allocator.max_size ()-1;
+     }
+
+     void resize (size_type n, charT c);  // hh 980311 uninlined
+
+     void resize (size_type n)
+     {
+          resize (n, charT ());
+     }
+
+     size_type capacity () const
+     { 
+          SREAD_LOCK(bfr->_mutex);
+          return bfr->bufsize - 1;  // hh 980803 added -1 (terminating null)
+     }
+
+    void reserve (size_type res_arg=0);  // hh 980311 uninlined
+
+     bool empty () const
+     {
+          SREAD_LOCK(bfr->_mutex);
+          return !bfr->strsize;
+     }
+
+    void clear (); // hh 980515 uninlined
+
+     const_reference operator[] (size_type pos) const
+     {
+          SREAD_LOCK(bfr->_mutex);
+     //     if (pos > bfr->strsize) THR_RANGE       // hh 980124 should not do range checking
+          return *(bfr->start+pos);
+     }
+
+     reference operator[] (size_type pos);  // hh 980507 uninlined
+
+     const_reference at (size_type pos) const
+     {
+          SREAD_LOCK(bfr->_mutex);
+          if (pos >= bfr->strsize) THR_RANGE
+          return *(bfr->start + pos);
+     }
+
+     reference at (size_type pos);  // hh 980507 uninlined
+
+     basic_string& operator+= (const basic_string& str)
+     {
+          SWRITE_LOCK(str.bfr->_mutex);
+          return append (str.bfr->start, str.bfr->strsize);
+     }
+
+     basic_string& operator+= (const charT* s)
+     {
+          return append (s, traits::length (s));
+     }
+
+     basic_string& operator+= (charT c)
+     {
+          return append (&c, 1);
+     }
+
+     basic_string& append (const basic_string& str)
+     {
+          SWRITE_LOCK(str.bfr->_mutex);
+          return append (str.bfr->start, str.bfr->strsize);
+     }
+
+     basic_string& append (const basic_string& str, size_type pos, size_type n)
+     {
+          SWRITE_LOCK(str.bfr->_mutex);
+          if (pos > str.bfr->strsize)  THR_RANGE
+          return append (str.bfr->start + pos, 
+                       n > str.bfr->strsize - pos ? str.bfr->strsize - pos : n);
+     }
+
+     basic_string& append (const charT* s, size_type n);  // hh 980311 uninlined
+     basic_string& append (const charT* s)
+     {
+          return append (s, traits::length (s));
+     }
+
+     basic_string& append (size_type rep, charT c);
+
+#ifdef MSIPL_MEMBER_TEMPLATE
+     template<class InputIterator>
+     inline
+     basic_string& append (InputIterator first, InputIterator last)
+     {
+          return append ((pointer)first, (size_type)(last-first));
+     }
+#else
+     basic_string& append (const_iterator first, const_iterator last)
+     {
+          return append ((const_pointer)first, (size_type)(last-first));
+     }
+#endif
+
+     basic_string& assign (const basic_string& str)
+     {
+          return *this = str;
+     }
+     basic_string& assign (const basic_string& str, size_type pos, size_type n)
+     {
+          SWRITE_LOCK(str.bfr->_mutex);
+          if (pos > str.bfr->strsize) THR_RANGE
+          return assign (str.bfr->start + pos, 
+                       n > str.bfr->strsize - pos ? str.bfr->strsize - pos : n);
+     }
+
+     basic_string& assign (const charT* s, size_type n);  // hh 980311 uninlined
+
+     basic_string& assign (const charT* s)
+     {
+          return assign (s, traits::length (s));
+     }
+
+     basic_string& assign (size_type n, charT c);  // hh 980311 uninlined
+
+#ifdef MSIPL_MEMBER_TEMPLATE
+     template<class InputIterator>
+     inline
+     basic_string& assign (InputIterator first, InputIterator last)
+     {
+          return assign ((pointer)first, (size_type)(last-first));
+     }
+#else
+     basic_string& assign (const_iterator first, const_iterator last)
+     {
+          return assign ((const_pointer)first, (size_type)(last-first));
+     }
+#endif
+
+     basic_string& insert (size_type pos, const basic_string& str)
+     {
+          SWRITE_LOCK(str.bfr->_mutex);
+          if (pos > bfr->strsize) THR_RANGE
+          return insert (pos, str.bfr->start, str.bfr->strsize);
+     }
+
+     basic_string& insert (size_type pos1, const basic_string& str, 
+                              size_type pos2, size_type n)
+     {
+          SWRITE_LOCK(str.bfr->_mutex);
+          if (pos1 > bfr->strsize || pos2 > str.bfr->strsize) THR_RANGE
+          return insert (pos1, str.bfr->start + pos2, 
+                   (n > str.bfr->strsize - pos2) ? str.bfr->strsize - pos2 : n);
+     }
+
+     basic_string& insert (size_type pos, const charT* s, size_type n);  // hh 980311 uninlined
+     basic_string& insert (size_type pos, size_type n, charT c);         // hh 980311 uninlined
+
+     basic_string& insert (size_type pos, const charT* s)
+     {
+          return insert (pos, s, traits::length (s));
+     }
+
+     iterator insert (iterator p, charT c)  // hh 980507 removed default arg per standard
+     {
+          size_type q = size_t(p - bfr->start); insert (size_t(p - bfr->start), 1, c);
+          return bfr->start + q;
+     }
+
+     void insert (iterator p, size_type n, charT c)
+     {
+          insert (size_type(p - bfr->start), n, c);
+     }
+
+#ifdef MSIPL_MEMBER_TEMPLATE
+     template<class InputIterator>
+     inline
+     void insert (iterator p, InputIterator first, InputIterator last)
+     {
+          insert (p - bfr->start, (pointer)first, (size_type)(last-first));
+     }
+#else
+     void insert (iterator p, const_iterator f, const_iterator l)
+     {
+          insert (p-bfr->start, (const_pointer)f, (size_type) (l-f));
+     }
+#endif
+
+     basic_string& erase (size_type pos=0, size_type n=npos);  // hh 980311 uninlined
+     iterator erase (iterator p)
+     {
+          erase (size_t(p - bfr->start), 1);
+          return p;
+     }
+
+     iterator erase (iterator first, iterator last)
+     {
+          erase (size_type(first - bfr->start), size_type(last - first));  // hh 980804
+          return first;
+     }
+
+     basic_string& replace (size_type p, size_type n, const basic_string& s)
+     {
+          SWRITE_LOCK(s.bfr->_mutex);
+          return replace (p, n, s.bfr->start, s.bfr->strsize);
+     }
+
+     basic_string& replace (size_type p1, size_type n1, const basic_string& s, 
+                              size_type p2, size_type n2)
+     {
+          SWRITE_LOCK(s.bfr->_mutex);
+          if (p2 > s.bfr->strsize) THR_RANGE
+          return replace (p1, n1, s.bfr->start + p2, 
+                          n2 > s.bfr->strsize - p2 ? s.bfr->strsize - p2 : n2);
+     }
+
+     basic_string& replace (size_type, size_type, const charT*, size_type);  // hh 980311 uninlined
+
+     basic_string& replace (size_type p, size_type n, const charT* s)
+     {
+          return replace (p, n, s, traits::length (s));
+     }
+
+     basic_string& replace (size_type, size_type, size_type, charT);  // hh 980311 uninlined
+
+     basic_string& replace (iterator i1, iterator i2, const basic_string& s)
+     {
+          SWRITE_LOCK(s.bfr->_mutex);
+          return replace (i1-bfr->start, i2-i1, s.bfr->start, s.bfr->strsize);
+     }
+
+     basic_string& replace (iterator i1, iterator i2, const charT* s, 
+                              size_type n)
+     {
+          return replace (i1 - bfr->start, i2 - i1, s, n);
+     }
+
+     basic_string& replace (iterator i1, iterator i2, const charT* s)
+     {
+          return replace (i1 - bfr->start, i2 - i1, s, traits::length (s));
+     }
+
+     basic_string& replace (iterator i1, iterator i2, size_type n, charT c)
+     {
+          return replace (i1 - bfr->start, i2 - i1, n, c);
+     }
+
+#ifdef MSIPL_MEMBER_TEMPLATE
+     template<class InputIterator> 
+     inline
+     basic_string& replace (iterator i1, iterator i2, 
+                            InputIterator j1, InputIterator j2)
+     {
+          return replace (i1 - bfr->start, i2 - i1, (pointer)j1, j2 - j1);
+     }
+#else
+     basic_string& replace (iterator i1, iterator i2, const_iterator j1, 
+                            const_iterator j2)
+     {
+          return replace (i1 - bfr->start, i2 - i1, (pointer)j1, j2 - j1);
+     }
+#endif
+
+     size_type copy (charT*, size_type, size_type pos=0) const;
+
+     void swap (basic_string& rhs)
+     {
+          SWRITE_LOCK(bfr->_mutex);
+          {
+               SWRITE_LOCK(rhs.bfr->_mutex);
+               MSIPLSTD::swap (bfr, rhs.bfr);
+          }
+     }
+
+     const charT* c_str () const
+     {
+          SREAD_LOCK(bfr->_mutex);
+          return bfr->start;
+     }
+
+     const charT* data () const
+     {
+          SREAD_LOCK(bfr->_mutex);
+          return bfr->start;
+     }
+  
+     allocator_type get_allocator () const
+     {
+          SREAD_LOCK(bfr->_mutex);
+          return bfr->string_allocator;
+     }
+
+     size_type find (const basic_string& str, size_type pos=0) const
+     {
+          SREAD_LOCK(str.bfr->_mutex);
+          return find (str.bfr->start, pos, str.bfr->strsize);
+     }
+
+     size_type find (const charT* s, size_type pos, size_type n) const;  // hh 980311 uninlined
+
+     size_type find (const charT* s, size_type pos=0) const
+     {
+          return find (s, pos, traits::length (s));
+     }
+
+     size_type find (charT c, size_type pos=0) const;  // hh 980507 uninlined
+       
+     size_type rfind (const basic_string& str, size_type pos=npos) const
+     {
+          SREAD_LOCK(str.bfr->_mutex);
+          return rfind (str.bfr->start, pos, str.bfr->strsize);
+     }
+
+     size_type rfind (const charT* s, size_type pos, size_type n) const;  // hh 980311 uninlined
+
+     size_type rfind (const charT* s, size_type pos=npos) const
+     {
+          return rfind (s, pos, traits::length (s));
+     }
+
+     size_type rfind (charT c, size_type pos = npos) const
+     {
+          SREAD_LOCK(bfr->_mutex);
+          const_pointer i = 1 + bfr->start + 
+                            (pos < bfr->strsize ? pos : bfr->strsize - 1);
+          while (--i >= bfr->start) 
+          if (traits::eq (*i, c))
+               return size_t(i - bfr->start);
+          return npos;    
+     }
+
+     size_type find_first_of (const basic_string& s, size_type pos=0) const
+     {
+          SREAD_LOCK(s.bfr->_mutex);
+          return find_first_of (s.bfr->start, pos, s.bfr->strsize);
+     }
+
+     size_type find_first_of (const charT*, size_type, size_type n) const;  // hh 980311 uninlined
+
+     size_type find_first_of (const charT* s, size_type pos=0) const
+     {
+          return find_first_of (s, pos, traits::length (s));
+     }
+
+     size_type find_first_of (charT c, size_type pos=0) const
+     {
+		SREAD_LOCK(bfr->_mutex);   // hh 971229 rewrote to get rid of warning
+		if (pos < bfr->strsize)
+		{
+			const_pointer p = traits::find (bfr->start + pos, bfr->strsize - pos, c);
+			if (p)
+				return p - bfr->start;
+		}
+		return npos;
+//          return (pos < bfr->strsize && (p = traits::find (bfr->start + pos, bfr->strsize - pos, c))) ? p - bfr->start : npos;
+     }
+
+     size_type find_last_of (const basic_string& s, size_type p = npos) const
+     {
+          SREAD_LOCK(s.bfr->_mutex);
+          return find_last_of (s.bfr->start, p, s.bfr->strsize);
+     }
+
+     size_type find_last_of (const charT*, size_type, size_type n) const;  // hh 980311 uninlined
+
+     size_type find_last_of (const charT* s, size_type pos = npos) const
+     {
+          return find_last_of (s, pos, traits::length (s));
+     }
+
+     size_type find_last_of (charT c, size_type pos=npos) const
+     {
+          SREAD_LOCK(bfr->_mutex);
+          if (bfr->strsize)
+          {
+               const_iterator i = bfr->start + 
+                                  (bfr->strsize > pos ? pos : bfr->strsize - 1);
+               for ( ; ; --i) {
+                    if (traits::eq (c, *i)) 
+                         return i - bfr->start;
+                    if (i == bfr->start) 
+                         break;
+               }
+          }
+          return npos;
+     }
+
+     size_type find_first_not_of (const basic_string& s, size_type p=0) const
+     {
+          SREAD_LOCK(s.bfr->_mutex);
+          return find_first_not_of (s.bfr->start, p, s.bfr->strsize);
+     }
+
+     size_type find_first_not_of (const charT*, size_type, size_type) const;  // hh 980311 uninlined
+
+     size_type find_first_not_of (const charT* s, size_type pos=0) const
+     {
+          return find_first_not_of (s, pos, traits::length (s));
+     }
+
+     size_type find_first_not_of (charT c, size_type pos=0) const
+     {
+          SREAD_LOCK(bfr->_mutex);
+          if (bfr->strsize>pos)
+          {
+               const_pointer p2 = bfr->start + bfr->strsize;
+               const_pointer p1 = bfr->start + 
+                                  (pos < bfr->strsize ? pos : bfr->strsize);
+               for ( ; p1 < p2; ++p1) 
+                    if (!traits_type::eq (*p1, c))
+                         return p1 - bfr->start;
+          }
+          return npos;
+     }
+
+     size_type find_last_not_of (const basic_string& s, size_type p=npos) const
+     {
+          SREAD_LOCK(s.bfr->_mutex);
+          return find_last_not_of (s.bfr->start, p, s.bfr->strsize);
+     }
+
+     size_type find_last_not_of (const charT*, size_type, size_type) const;  // hh 980311 uninlined
+
+     size_type find_last_not_of (const charT* s, size_type pos=npos) const
+     {
+          return find_last_not_of (s, pos, traits::length (s));
+     }
+
+     size_type find_last_not_of (charT c, size_type pos=npos) const
+     {
+          SREAD_LOCK(bfr->_mutex);
+          if (bfr->strsize)
+          {
+               const_iterator i = bfr->start + 
+                                        (bfr->strsize > pos ? pos : bfr->strsize - 1);
+               for ( ; ; --i) {
+               if (!traits::eq (c, *i)) 
+                    return i - bfr->start;
+               if (i == bfr->start)
+                    break;
+               }
+          }
+          return npos;
+     }
+
+     basic_string substr (size_type pos = 0, size_type n = npos) const;  // hh 980311 uninlined
+     int compare (const basic_string& str) const;  // hh 980311 uninlined
+     int compare (size_type, size_type n1, const basic_string& str) const;  // hh 980311 uninlined
+     int compare (size_type pos1, size_type n1, const basic_string& str,   // hh 980311 uninlined
+                         size_type pos2, size_type n2) const;
+     int compare (const charT* s) const;  // hh 980311 uninlined
+     int compare (size_type pos, size_type n1, const charT* str,   // hh 980311 uninlined
+                         size_type n2 = npos) const;
+
+};
+
+template<class charT, class traits, class Allocator>
+const typename basic_string<charT, traits, Allocator>::size_type
+basic_string<charT, traits, Allocator>::npos = (size_type)-1;
+
+//template<class charT, class traits, class Allocator>  // hh 980113 Removed, see below
+//typename basic_string<charT, traits, Allocator>::buff_t*
+//basic_string<charT, traits, Allocator>::nullbuf;
+
+typedef basic_string<char, char_traits<char>, allocator<char> > string;
+
+#ifdef MSIPL_WCHART
+typedef basic_string<wchar_t, char_traits<wchar_t>, allocator<wchar_t> > wstring;
+#endif
+
+template<class charT, class traits, class Allocator>
+basic_string<charT, traits, Allocator>::basic_string (const Allocator& alloc)
+{
+//   if (!nullbuf) nullbuf = new buff_t (0, 0, alloc);  // hh 980113 Removed, see below
+//   SWRITE_LOCK(nullbuf->_mutex);
+//   bfr=nullbuf;
+//   nullbuf->count++;
+     bfr = new buff_t (0, 0, alloc);
+}
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+basic_string<charT, traits, Allocator>::
+basic_string (const basic_string<charT, traits, Allocator>& str, 
+               size_type pos, size_type n, const Allocator& alloc)
+{
+     SWRITE_LOCK(str.bfr->_mutex);
+     if (!pos && n >= str.bfr->strsize && str.bfr->count != npos) {
+          bfr = str.bfr;
+          bfr->count++;
+     }
+     else {
+          size_type rlen = str.bfr->strsize - pos;
+          if (rlen > n) rlen = n;
+          if (pos > str.bfr->strsize) THR_RANGE
+          if (!(bfr = new buff_t (str.bfr->start + pos, rlen, alloc)))
+               THROW_BAD_ALLOC
+     }
+}
+
+template<class charT, class traits, class Allocator>
+//inline  // hh 980129
+basic_string<charT, traits, Allocator>::
+basic_string (const charT* s, size_type n, const Allocator& alloc)
+{
+     if (n >= npos) THR_RANGE
+     if (!(bfr = new buff_t (s, n, alloc)))
+          THROW_BAD_ALLOC
+}
+
+template<class charT, class traits, class Allocator>
+//inline  // hh 980129
+basic_string<charT, traits, Allocator>::
+basic_string (const charT* s, const Allocator& alloc)
+{
+     size_type n = traits::length (s);
+     if (n >= npos) THR_RANGE
+     if (!(bfr = new buff_t (s, n, alloc)))
+          THROW_BAD_ALLOC
+}
+
+template<class charT, class traits, class Allocator>
+//inline  // hh 980129
+basic_string<charT, traits, Allocator>::
+basic_string (size_type rep, charT c, const Allocator& alloc)
+{
+     if (rep >= npos)THR_RANGE
+     if (!(bfr = new buff_t (alloc)))
+          THROW_BAD_ALLOC
+     bfr->start = bfr->string_allocator.allocate (bfr->bufsize = (rep / DEFSZ + 1) * DEFSZ);
+     if (rep) traits::assign (bfr->start, rep, c);
+     traits::assign (*(bfr->start + (bfr->strsize = rep)), traits::eos ());
+}
+
+template<class charT, class traits, class Allocator>
+basic_string<charT, traits, Allocator>::~basic_string ()
+{
+	bool delete_it = false;
+	{
+		SWRITE_LOCK(bfr->_mutex);
+		if (bfr->count == npos || !--bfr->count)
+			delete_it = true;
+	}
+	if (delete_it) 
+		delete bfr;
+}
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+basic_string<charT, traits, Allocator>&
+basic_string<charT, traits, Allocator>::
+operator= (const basic_string<charT, traits, Allocator>& str)
+{
+     bool todel = false;
+     buff_t *optr = bfr;
+     if (bfr != str.bfr)
+     {
+          SWRITE_LOCK(bfr->_mutex);
+          {
+               if (bfr->count == npos || !--bfr->count) 
+                    todel = true;
+               SWRITE_LOCK(str.bfr->_mutex);
+               if (str.bfr->count == npos) {
+                    if (!(bfr = new buff_t (str.bfr->start, str.bfr->strsize, 
+                                            bfr->string_allocator))) 
+                    THROW_BAD_ALLOC  
+               }
+               else {
+                         bfr = str.bfr; 
+                         bfr->count++;
+               }
+          }
+     }
+     if (todel) delete optr;
+          return *this;
+}
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+basic_string<charT, traits, Allocator>&
+basic_string<charT, traits, Allocator>::operator= (const charT* s)
+{
+     size_type len = traits::length (s);
+     SWRITE_LOCK(bfr->_mutex);
+     if (bfr->count == npos || !--bfr->count) {
+          pointer tmp = 0;
+          size_type tmp_siz = bfr->bufsize;
+          bfr->count = 1;
+          if (bfr->strsize < len+1)
+          {
+               tmp = bfr->start;
+               bfr->start = bfr->string_allocator.allocate (bfr->bufsize = (len / DEFSZ + 1) * DEFSZ);
+          }
+          bfr->strsize = len;
+          traits::copy (bfr->start, s, len + 1);
+          bfr->string_allocator.deallocate (tmp, tmp_siz);
+     }
+     else {
+          if (!(bfr=new buff_t (s, len, bfr->string_allocator)))
+               THROW_BAD_ALLOC
+     }
+     return *this;
+}
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+basic_string<charT, traits, Allocator>&
+basic_string<charT, traits, Allocator>::operator= (charT c)
+{
+     SWRITE_LOCK(bfr->_mutex);
+     if (bfr->count == npos || !--bfr->count) {
+          bfr->strsize = bfr->count = 1;
+          traits::assign (*bfr->start, c);
+          traits::assign (*(bfr->start + 1), traits::eos ());
+     }
+     else {
+          if (!(bfr = new buff_t (bfr->string_allocator)))
+               THROW_BAD_ALLOC
+          bfr->start = bfr->string_allocator.allocate (bfr->bufsize = DEFSZ);
+          traits::assign (*bfr->start, c);
+          traits::assign (*(bfr->start + (bfr->strsize = 1)), traits::eos ());
+     }
+     return *this;
+}
+
+template<class charT, class traits, class Allocator>
+basic_string<charT, traits, Allocator>::iterator
+basic_string<charT, traits, Allocator>::begin()
+{
+	SWRITE_LOCK(bfr->_mutex);
+	if (bfr->count > (size_type)1 && bfr->count != npos)
+	{
+		--bfr->count;
+		if (!(bfr = new buff_t (bfr->start, bfr->strsize, bfr->string_allocator)))
+			THROW_BAD_ALLOC
+	}
+	bfr->count = npos;
+	return bfr->start;
+}
+
+template<class charT, class traits, class Allocator>
+basic_string<charT, traits, Allocator>::iterator
+basic_string<charT, traits, Allocator>::end()
+{ 
+	SWRITE_LOCK(bfr->_mutex);
+	if (bfr->count > (size_type)1 && bfr->count != npos)
+	{
+		--bfr->count;
+		if (!(bfr = new buff_t (bfr->start, bfr->strsize, bfr->string_allocator)))
+			THROW_BAD_ALLOC
+	}
+	bfr->count = npos;
+	return (bfr->start + bfr->strsize);
+}
+
+template<class charT, class traits, class Allocator>
+basic_string<charT, traits, Allocator>::reference
+basic_string<charT, traits, Allocator>::operator[] (size_type pos)
+{
+	SWRITE_LOCK(bfr->_mutex);
+	//     if (pos>bfr->strsize) THR_RANGE      // hh 980124 should not do range checking
+	if (bfr->count > 1 && bfr->count != npos)
+	{
+		--bfr->count;
+		if (!(bfr = new buff_t (bfr->start, bfr->strsize)))
+			THROW_BAD_ALLOC
+	}
+	bfr->count = npos;
+	return *(bfr->start + pos);
+}
+
+template<class charT, class traits, class Allocator>
+basic_string<charT, traits, Allocator>::reference
+basic_string<charT, traits, Allocator>::at (size_type pos)
+{
+	SWRITE_LOCK(bfr->_mutex);
+	if (pos >= bfr->strsize)
+		THR_RANGE
+	if (bfr->count > 1 && bfr->count != npos)
+	{
+		--bfr->count;
+		if (!(bfr=new buff_t (bfr->start, bfr->strsize)))
+			THROW_BAD_ALLOC
+	}
+	bfr->count = npos;
+	return *(bfr->start + pos);
+}
+
+template<class charT, class traits, class Allocator>
+void basic_string<charT, traits, Allocator>::resize (size_type n, charT c)
+{
+     if (n != bfr->strsize)
+     {
+          SWRITE_LOCK(bfr->_mutex);
+          if (n > bfr->string_allocator.max_size ()-1) THR_LEN
+          if (bfr->count == npos || !--bfr->count)
+          {
+               bfr->count=1;
+               if (n > bfr->strsize)    
+               {
+                    if (n > bfr->bufsize-1)  // hh 980803 added -1.  Must make room for terminating 0.
+                    {
+                         pointer tmp = bfr->string_allocator.allocate ((n / DEFSZ + 1) * DEFSZ);
+                         traits::copy (tmp, bfr->start, bfr->strsize);
+                         bfr->string_allocator.deallocate (bfr->start, bfr->bufsize);
+                         bfr->bufsize = (n/DEFSZ+1)*DEFSZ;
+                         bfr->start=tmp;
+                    }
+                    traits::assign (bfr->start + bfr->strsize, n - bfr->strsize, c);
+                    bfr->strsize = n;
+               }
+               else bfr->strsize = n;
+          }
+          else
+          {
+               buff_t *tmp = new buff_t (bfr->string_allocator);
+               if (!tmp)
+                    THROW_BAD_ALLOC
+               tmp->start = tmp->string_allocator.allocate (tmp->bufsize = (n / DEFSZ + 1) * DEFSZ);
+               if ( (tmp->strsize = n) > bfr->strsize)
+               {
+                    traits::copy (tmp->start, bfr->start, bfr->strsize);
+                    traits::assign (tmp->start + bfr->strsize, n - bfr->strsize, c);
+               }
+               else traits::copy (tmp->start, bfr->start, n);
+               bfr = tmp;
+          }
+          traits::assign (*(bfr->start + bfr->strsize), traits::eos ());
+     }
+}
+
+template<class charT, class traits, class Allocator>
+void
+basic_string<charT, traits, Allocator>::clear ()
+{
+   SWRITE_LOCK(bfr->_mutex);
+      if (bfr->count == npos || !--bfr->count) {
+           bfr->count=1;
+           bfr->strsize=0;
+           traits::assign (*(bfr->start), traits::eos ());
+      }
+      else {
+//           if (!nullbuf) nullbuf = new buff_t (0, 0);  // hh 980113 Removed, see below
+//           SWRITE_LOCK(nullbuf->_mutex);
+//           nullbuf->count++; 
+//           bfr = nullbuf;
+             bfr = new buff_t (0, 0);
+      }
+ }
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+void basic_string<charT, traits, Allocator>::reserve (size_type res_arg)
+{
+     SWRITE_LOCK(bfr->_mutex);
+     if (res_arg >= npos) THR_LEN
+     if (res_arg > bfr->bufsize - 1)   // hh 980803 added -1 (terminating null)
+     {
+          pointer tmp = bfr->string_allocator.allocate ((res_arg / DEFSZ + 1) * DEFSZ);
+          traits::copy (tmp, bfr->start, bfr->strsize + 1);
+          bfr->string_allocator.deallocate (bfr->start, bfr->bufsize);
+          bfr->bufsize = (res_arg / DEFSZ + 1) * DEFSZ;
+          bfr->start = tmp;
+     }
+}
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+basic_string<charT, traits, Allocator>&
+basic_string<charT, traits, Allocator>::append (const charT* s, size_type n)
+{
+     SWRITE_LOCK(bfr->_mutex);
+     size_type len=bfr->strsize;
+     if (len >= npos - n) THR_LEN
+     if (bfr->count == npos || !--bfr->count)
+     {
+          pointer tmp=0;
+          size_type tmp_siz = bfr->bufsize;
+          bfr->count=1;
+          if (bfr->bufsize <= (bfr->strsize += n))
+          {
+               tmp=bfr->start;
+               bfr->start=bfr->string_allocator.allocate (bfr->bufsize = (bfr->strsize / DEFSZ + 1) * DEFSZ);
+               traits::copy (bfr->start, tmp, len);
+          }
+          traits::copy (bfr->start + len, s, n);
+          bfr->string_allocator.deallocate (tmp, tmp_siz);
+     }
+     else
+     {
+          buff_t *tmp = new buff_t (bfr->string_allocator);
+          if (!tmp)
+               THROW_BAD_ALLOC
+          tmp->bufsize = ((tmp->strsize = len + n) / DEFSZ + 1) * DEFSZ;
+          tmp->start = tmp->string_allocator.allocate (tmp->bufsize);
+          traits::copy (tmp->start, bfr->start, len);
+          traits::copy (tmp->start+len, s, n);
+          bfr = tmp;
+     }
+     traits::assign (*(bfr->start+bfr->strsize), traits::eos ());
+     return *this;
+}
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+basic_string<charT, traits, Allocator>&
+basic_string<charT, traits, Allocator>::append (size_type n, charT c)
+{
+     SWRITE_LOCK(bfr->_mutex);
+     size_type len = bfr->strsize;
+     if (len >= npos - n) THR_LEN
+     if (bfr->count == npos || !--bfr->count)
+     {
+          pointer tmp = 0;
+          size_type tmp_siz = bfr->bufsize;
+          bfr->count = 1;
+          if (bfr->bufsize <= (bfr->strsize += n))
+          {
+               tmp = bfr->start;
+               bfr->start = bfr->string_allocator.allocate (bfr->bufsize = (bfr -> strsize / DEFSZ + 1) * DEFSZ);
+               traits::copy (bfr->start, tmp, len);
+          }
+          traits::assign (bfr->start+len, n, c);
+          bfr->string_allocator.deallocate (tmp, tmp_siz);
+     }
+     else
+     {
+          buff_t *tmp = new buff_t (bfr->string_allocator);
+          if (!tmp)
+               THROW_BAD_ALLOC
+          tmp->bufsize = ((tmp->strsize = len + n) / DEFSZ + 1) * DEFSZ;
+          tmp->start = tmp->string_allocator.allocate (tmp->bufsize);
+          traits::copy (tmp->start, bfr->start, len);
+          traits::assign (tmp->start+len, n, c);
+          bfr = tmp;
+     }
+     traits::assign (*(bfr->start+bfr->strsize), traits::eos ());
+     return *this;
+}
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+basic_string<charT, traits, Allocator>&
+basic_string<charT, traits, Allocator>::assign (const charT* s, size_type n)
+{
+     if (n >= npos) THR_LEN
+     SWRITE_LOCK(bfr->_mutex);
+     if (bfr->count == npos || !--bfr->count)
+     {
+          pointer tmp = 0;
+          size_type tmp_siz = bfr->bufsize;
+          bfr->count = 1;
+          if (bfr->bufsize <= (bfr->strsize = n))
+          {
+               tmp = bfr->start;
+               bfr->start = bfr->string_allocator.allocate (bfr->bufsize = (n / DEFSZ + 1) * DEFSZ);
+          }
+          traits::copy (bfr->start, s, n);
+          traits::assign (*(bfr->start + n), traits::eos ());
+          bfr->string_allocator.deallocate (tmp, tmp_siz);
+     }
+     else 
+          if (!(bfr = new buff_t (s, n, bfr->string_allocator)))
+               THROW_BAD_ALLOC
+     return *this;
+}
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+basic_string<charT, traits, Allocator>&
+basic_string<charT, traits, Allocator>::assign (size_type n, charT c)
+{
+     if (n >= npos) THR_LEN
+     SWRITE_LOCK(bfr->_mutex);
+     if (bfr->count == npos || !--bfr->count) {
+          pointer tmp=0;
+          size_type tmp_siz = bfr->bufsize;
+          bfr->count=1;
+          if (bfr->bufsize <= (bfr->strsize=n)) {
+               tmp = bfr->start;
+               bfr->start = bfr->string_allocator.allocate (bfr->bufsize = (n / DEFSZ + 1) * DEFSZ);
+          }
+          traits::assign (bfr->start, n, c);
+          bfr->string_allocator.deallocate (tmp, tmp_siz);
+     }
+     else {
+          if (!(bfr=new buff_t (bfr->string_allocator)))
+               THROW_BAD_ALLOC
+          bfr->start = bfr->string_allocator.allocate (bfr->bufsize = (n / DEFSZ + 1) * DEFSZ);
+          bfr->strsize = n;  // hh 971229 warning supression
+          if (n != 0)
+          	traits::assign (bfr->start, n, c);
+     }
+     traits::assign (*(bfr->start + n), traits::eos ());
+     return *this;
+}
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+basic_string<charT, traits, Allocator>& basic_string<charT, traits, 
+Allocator>::insert (size_type pos, const charT* s, size_type rlen)
+{
+     if (rlen && s)
+     {
+          SWRITE_LOCK(bfr->_mutex);
+          size_type strsz = bfr->strsize;
+          size_type sz = ( (strsz + rlen) / DEFSZ + 1) * DEFSZ;
+          pointer tmp = bfr->string_allocator.allocate (sz);
+          if (pos > strsz) THR_RANGE
+          if (rlen >= npos - strsz) THR_LEN
+          if (pos)
+               traits::copy (tmp, bfr->start, pos);
+          traits::copy (tmp+pos, s, rlen);
+          if (strsz - pos)
+               traits::copy (tmp + pos + rlen, bfr->start + pos, strsz - pos);
+          if (bfr->count == npos || !--bfr->count)
+          {
+               bfr->count = 1;
+               bfr->string_allocator.deallocate (bfr->start, bfr->bufsize);
+          }
+          else 
+               if (!(bfr = new buff_t (bfr->string_allocator)))
+                    THROW_BAD_ALLOC
+          bfr->start = tmp;
+          bfr->bufsize = sz;
+          bfr->strsize = strsz + rlen;
+          traits::assign (*(tmp + bfr->strsize), traits::eos ());
+     }
+     return *this;
+}
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+basic_string<charT, traits, Allocator>& basic_string<charT, traits, 
+Allocator>::insert (size_type pos, size_type rlen, charT c)
+{ 
+     if (rlen)
+     {
+          SWRITE_LOCK(bfr->_mutex);
+          size_type strsz = bfr->strsize;
+          size_type sz = ((strsz + rlen) / DEFSZ + 1) * DEFSZ;
+          pointer tmp=bfr->string_allocator.allocate (sz);
+          if (pos > strsz) THR_RANGE
+          if (rlen >= npos - strsz) THR_LEN
+          if (pos)
+               traits::copy (tmp, bfr->start, pos);
+          traits::assign (tmp + pos, rlen, c);
+          if (strsz - pos)
+               traits::copy (tmp + pos + rlen, bfr->start + pos, strsz - pos);
+          if (bfr->count == npos || !--bfr->count)
+          {
+               bfr->count = 1;
+               bfr->string_allocator.deallocate (bfr->start, bfr->bufsize);
+          }
+          else 
+               if (!(bfr = new buff_t (bfr->string_allocator)))
+                    THROW_BAD_ALLOC
+          bfr->start = tmp;
+          bfr->bufsize = sz;
+          bfr->strsize = strsz + rlen;
+          traits::assign (*(tmp + bfr->strsize), traits::eos ());
+     }
+     return *this;
+}
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+basic_string<charT, traits, Allocator>&
+basic_string<charT, traits, Allocator>::erase (size_type pos, size_type n)
+{
+     SWRITE_LOCK(bfr->_mutex);
+     size_type xlen = n > bfr->strsize - pos ? bfr->strsize - pos : n;
+     size_type len = bfr->strsize - pos - xlen;
+     if (pos > bfr->strsize) THR_RANGE
+     if (xlen)
+     {
+          if (bfr->count == npos || !--bfr->count)
+          {
+               bfr->count=1;
+               if (len)
+                    traits::copy (bfr->start + pos, bfr->start + pos + xlen, len);
+               bfr->strsize -= xlen;
+          }
+          else
+          {
+               buff_t *tmp = new buff_t (bfr->string_allocator);
+               if (!tmp)
+                    THROW_BAD_ALLOC  
+               tmp->start = bfr->string_allocator.allocate (tmp->bufsize = bfr->bufsize);
+               if (pos)
+                    traits::copy (tmp->start, bfr->start, pos);
+               if (len)
+                    traits::copy (tmp->start + pos, bfr->start + pos + xlen, len);
+               tmp->strsize = bfr->strsize - xlen;
+               bfr = tmp;
+          }
+          traits::assign (*(bfr->start + bfr->strsize), traits::eos ());
+     }
+     return *this;
+}
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+basic_string<charT, traits, Allocator>& basic_string<charT, traits, 
+Allocator>::replace (size_type pos, size_type n1, const charT* s, size_type n2)
+{
+     SWRITE_LOCK(bfr->_mutex);
+     size_type xlen = n1 > bfr->strsize - pos ? bfr->strsize - pos : n1;
+     if (pos > bfr->strsize) THR_RANGE
+     if (bfr->strsize - xlen >= npos - n2) THR_LEN
+     insert (pos, s, n2);
+     erase (pos + n2, xlen);
+     return *this;
+}
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+basic_string<charT, traits, Allocator>& basic_string<charT, traits, 
+Allocator>::replace (size_type pos, size_type n1, size_type n2, charT c)
+{
+     SWRITE_LOCK(bfr->_mutex);
+     size_type xlen = n1 > bfr->strsize - pos ? bfr->strsize - pos : n1;
+     if (pos > bfr->strsize) THR_RANGE
+     if (bfr->strsize - xlen >= npos - n2) THR_LEN
+     insert (pos, n2, c);
+     erase (pos + n2, xlen);
+     return *this;
+}
+
+template<class charT, class traits, class Allocator>
+//inline  // hh 980129
+typename basic_string<charT, traits, Allocator>::size_type basic_string
+<charT, traits, Allocator>::copy (charT* s, size_type n, size_type pos) const
+{
+     SWRITE_LOCK(bfr->_mutex);
+     size_type rlen = n > bfr->strsize - pos ? bfr->strsize - pos : n;
+     if (pos > bfr->strsize) THR_RANGE
+     if (rlen) traits_type::copy (s, bfr->start + pos, rlen);
+     return rlen;
+}
+
+template<class charT, class traits, class Allocator>
+basic_string<charT, traits, Allocator>::size_type
+basic_string<charT, traits, Allocator>::find (charT c, size_type pos) const
+{
+	SREAD_LOCK(bfr->_mutex);
+	if (bfr->strsize < pos)
+		return npos;
+	const_pointer p = traits::find (bfr->start + pos, bfr->strsize - pos, c);
+	return p ? p-bfr->start : npos;
+}
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+typename basic_string<charT, traits, Allocator>::size_type
+basic_string<charT, traits, Allocator>::
+find (const charT* s, size_type pos, size_type str_len) const
+{
+     SREAD_LOCK(bfr->_mutex);
+     size_type count;
+     const_iterator iter1 = bfr->start+pos;
+     const_iterator iter2;
+     if ((count = bfr->strsize - pos) < str_len || count > bfr->strsize || !bfr->strsize || !str_len)
+          return npos;
+     for (count -= str_len - 1; (iter2 = traits_type::find (iter1, count, *s)) != 0;  // hh 971229 added != 0 to suppress warning
+          count -= size_type(iter2 - iter1 + 1), iter1 = iter2 + 1)
+          if (!traits_type::compare (iter2, s, str_len)) 
+               return size_type(iter2-bfr->start);
+     return npos;
+}
+
+template<class charT, class traits, class Alloc>
+//inline      // hh 980124
+typename basic_string<charT, traits, Alloc>::size_type 
+basic_string <charT, traits, Alloc>::
+rfind (const charT* s, size_type pos, size_type n) const
+{
+     SREAD_LOCK(bfr->_mutex);
+     const_iterator iter = bfr->start + (pos < bfr->strsize - n ? pos : bfr->strsize - n);
+     if (!n || bfr->strsize < n) 
+          return npos;
+     for (;; --iter){
+          if (traits_type::eq (*iter, *s) && !traits_type::compare (iter, s, n))
+               return (iter - bfr->start); 
+          if (iter == bfr->start) 
+               break;
+     }
+     return npos;
+}
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+typename basic_string<charT, traits, Allocator>::size_type 
+basic_string<charT, traits, Allocator>::
+find_first_of (const charT* s, size_type pos, size_type str_len) const
+{
+     SREAD_LOCK(bfr->_mutex);
+     if (str_len && bfr->strsize > pos)
+     {
+          const_iterator iter1 = bfr->start + pos;
+          const_iterator iter2 = bfr->start + bfr->strsize;
+          for (; iter1 < iter2; ++iter1)
+               if (traits::find (s, str_len, *iter1)) 
+                    return (iter1 - bfr->start);
+     }
+     return npos;
+}
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+typename basic_string<charT, traits, Allocator>::size_type
+basic_string<charT, traits, Allocator>::
+find_last_of (const charT* s, size_type pos, size_type n) const
+{
+     SREAD_LOCK(bfr->_mutex);
+     if (n && bfr->strsize)
+     {
+          const_iterator iter = bfr->start + (bfr->strsize > pos ? pos : bfr->strsize - 1);
+          for ( ; ; --iter){
+               if (traits::find (s, n, *iter)) 
+                    return iter - bfr->start;
+               if (iter == bfr->start) 
+                    break;
+          }
+     }
+     return npos;
+}
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+typename basic_string<charT, traits, Allocator>::size_type
+basic_string<charT, traits, Allocator>::
+find_first_not_of (const charT* s, size_type pos, size_type n) const
+{
+     SREAD_LOCK(bfr->_mutex);
+     if (bfr->strsize > pos)
+     {
+          const_iterator iter1 = bfr->start + pos;
+          const_iterator iter2 = bfr->start + bfr->strsize;
+          for (; iter1 < iter2; ++iter1)
+               if (!traits_type::find (s, n, *iter1))
+                    return iter1 - bfr->start;
+     }
+     return npos;
+}
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+typename basic_string<charT, traits, Allocator>::size_type
+basic_string<charT, traits, Allocator>::
+find_last_not_of (const charT* s, size_type pos, size_type n) const
+{
+     SREAD_LOCK(bfr->_mutex);
+     if (bfr->strsize)
+          for (const_iterator i = bfr->start + (pos < bfr->strsize ? pos : bfr->strsize - 1);; --i) {
+               if (!traits_type::find (s, n, *i)) 
+                    return i - bfr->start;
+               if (bfr->start == i)
+                    break;
+          }
+     return npos;
+}
+
+template<class charT, class traits, class Allocator>
+//inline  // hh 980129
+basic_string<charT, traits, Allocator>
+basic_string<charT, traits, Allocator>::substr (size_type pos, size_type n) const
+{
+     SREAD_LOCK(bfr->_mutex);
+     if (pos > bfr->strsize)
+          THR_RANGE
+     if ((!pos && n >= bfr->strsize) || !bfr->strsize)
+          return *this;
+     return basic_string (bfr->start + pos, n > (bfr->strsize - pos) ? bfr->strsize - pos : n);
+}
+
+template<class charT, class traits, class Allocator>
+//inline  // hh 980129
+int basic_string<charT, traits, Allocator>::
+compare (const basic_string<charT, traits, Allocator>& s) const
+{
+     SREAD_LOCK(bfr->_mutex);
+     {
+          SREAD_LOCK(s.bfr->_mutex);
+          size_type rlen = (bfr->strsize>s.bfr->strsize) ? s.bfr->strsize : bfr->strsize;
+          int result = traits_type::compare (bfr->start, s.bfr->start, rlen);
+          return result ? result : int(bfr->strsize - s.bfr->strsize);
+     }
+}
+
+template<class charT, class traits, class Allocator>
+//inline  // hh 980129
+int basic_string<charT, traits, Allocator>::
+compare (size_type p, size_type n1, const basic_string<charT, traits, Allocator>& s) const
+{
+     SREAD_LOCK(bfr->_mutex);
+     {
+          SREAD_LOCK(s.bfr->_mutex);
+          size_type l1 = n1 < bfr->strsize - p ? n1 : bfr->strsize - p;
+          if (p > bfr->strsize)
+               THR_RANGE
+          int result = traits_type::compare (bfr->start + p, s.bfr->start, 
+                                                   l1 < s.bfr->strsize ? l1 : s.bfr->strsize);
+          return result ? result : l1 - s.bfr->strsize;
+     }
+}
+
+template<class charT, class traits, class Allocator>
+//inline  // hh 980129
+int basic_string<charT, traits, Allocator>::
+compare (size_type p1, size_type n1, const basic_string<charT, traits, 
+         Allocator>&s, size_type p2, size_type n2) const
+{
+     SREAD_LOCK(bfr->_mutex);
+     {
+          SREAD_LOCK(s.bfr->_mutex);
+          size_type l2 = n2 < s.bfr->strsize - p2 ? n2 : s.bfr->strsize - p2;
+          size_type l1 = n1 < bfr->strsize - p1 ? n1 : bfr->strsize - p1;
+          size_type rlen=l1 > l2 ? l2 : l1;
+          if (p2 > s.bfr->strsize || p1 > bfr->strsize)
+               THR_RANGE
+          int result = traits_type::compare (bfr->start + p1, s.bfr->start + p2, rlen);
+          return result ? result : l1 - l2;
+     }
+}
+
+template<class charT, class traits, class Allocator>
+//inline   // hh 980129
+int basic_string<charT, traits, Allocator>::compare (const charT* s) const
+{
+     SREAD_LOCK(bfr->_mutex);
+     size_type len = traits::length (s);
+     size_type rlen = bfr->strsize > len ? len : bfr->strsize;
+     int result = traits_type::compare (bfr->start, s, rlen);
+     return result ? result : int(bfr->strsize - len);
+}
+
+template<class charT, class traits, class Allocator>
+//inline  // hh 980129
+int basic_string<charT, traits, Allocator>::
+compare (size_type p, size_type n1, const charT* s, size_type n2) const
+{
+     SREAD_LOCK(bfr->_mutex);
+     size_type l1 = n1 < bfr->strsize - p ? n1 : bfr->strsize - p;
+     size_type l2 = n2 < traits::length (s) ? n2 : traits::length (s); 
+     size_type rlen = l1 > l2 ? l2 : l1;
+     if (p > bfr->strsize)
+          THR_RANGE
+     int result = traits_type::compare (bfr->start + p, s, rlen);
+     return result ? result : l1 - l2;
+}
+
+template<class charT, class traits, class Allocator>
+//inline  // hh 980504
+basic_string<charT, traits, Allocator>
+operator+ (const basic_string<charT, traits, Allocator>& lhs, 
+const basic_string<charT, traits, Allocator>& rhs)
+{
+     return basic_string<charT, traits, Allocator> (lhs).append (rhs);
+}
+
+template<class chT, class traits, class Alloc>
+inline basic_string<chT, traits, Alloc>
+operator+ (const chT* lhs, const basic_string<chT, traits, Alloc>& rhs)
+{
+     return basic_string<chT, traits, Alloc> (rhs).insert (0, lhs, traits::length (lhs));
+}
+
+template<class chT, class traits, class Alloc>
+inline basic_string<chT, traits, Alloc>
+operator+ (chT lhs, const basic_string<chT, traits, Alloc>& rhs) 
+{
+     return basic_string<chT, traits, Alloc> (rhs).insert (0, &lhs, 1);
+}
+
+template<class chT, class traits, class Alloc>
+//inline  // hh 980505
+basic_string<chT, traits, Alloc>
+operator+ (const basic_string<chT, traits, Alloc>& lhs, const chT* rhs) 
+{
+     return basic_string<chT, traits, Alloc> (lhs).append (rhs, traits::length (rhs));
+}
+
+template<class charT, class traits, class Allocator>
+inline basic_string<charT, traits, Allocator>
+operator+ (const basic_string<charT, traits, Allocator>& lhs, charT rhs) 
+{
+     return basic_string<charT, traits, Allocator> (lhs).append (&rhs, 1);
+}
+
+template<class charT, class traits, class Allocator>
+inline bool operator == (const basic_string<charT, traits, Allocator>& lhs, 
+const basic_string<charT, traits, Allocator>& rhs)
+{
+     return !(lhs.compare (rhs));
+}
+
+template<class charT, class traits, class Alloc> 
+inline bool operator == (const charT* l, const basic_string<charT, traits, Alloc>& r)
+{
+     return !(r.compare (l));
+}
+
+template<class charT, class traits, class Allocator> inline bool 
+operator == (const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) 
+{
+     return !(lhs.compare (rhs));
+}
+
+template<class charT, class traits, class Allocator>
+inline bool operator != (const basic_string<charT, traits, Allocator>& lhs, 
+const basic_string<charT, traits, Allocator>& rhs)
+{
+     return lhs.compare (rhs) != 0;
+}
+
+template<class charT, class traits, class Allocator>
+inline bool operator != (const charT* lhs, 
+const basic_string<charT, traits, Allocator>& rhs)
+{
+     return rhs.compare (lhs) != 0;
+}
+
+template<class charT, class traits, class Allocator> 
+inline bool operator != (const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) 
+{
+     return lhs.compare (rhs) != 0;
+}
+
+template<class charT, class traits, class Allocator>
+inline bool operator< (const basic_string<charT, traits, Allocator>& lhs, 
+const basic_string<charT, traits, Allocator>& rhs)
+{
+     return lhs.compare (rhs)<0;
+}
+
+template<class charT, class traits, class Allocator> inline bool operator<
+ (const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) 
+{
+     return rhs.compare (lhs)>0;
+}
+
+template<class charT, class traits, class Allocator> inline bool operator<
+ (const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) 
+{
+     return lhs.compare (rhs)<0;
+}
+
+template<class charT, class traits, class Allocator>
+inline bool operator> (const basic_string<charT, traits, Allocator>& lhs, 
+const basic_string<charT, traits, Allocator>& rhs)
+{
+     return lhs.compare (rhs)>0;
+}
+
+template<class charT, class traits, class Allocator> inline bool operator>
+ (const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) 
+{
+     return rhs.compare (lhs)<0;
+}
+
+template<class charT, class traits, class Allocator> inline bool operator>
+ (const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) 
+{
+     return lhs.compare (rhs)>0;
+}
+
+template<class charT, class traits, class Allocator> inline bool operator >= 
+ (const basic_string<charT, traits, Allocator>& lhs, 
+const basic_string<charT, traits, Allocator>& rhs)
+{
+     return lhs.compare (rhs) >= 0;
+}
+
+template<class charT, class traits, class Allocator> inline bool operator >= 
+ (const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) 
+{
+     return rhs.compare (lhs) <= 0;
+}
+
+template<class charT, class traits, class Allocator> inline bool operator >= 
+ (const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) 
+{
+     return lhs.compare (rhs) >= 0;
+}
+
+template<class charT, class traits, class Allocator>
+inline bool operator <= (const basic_string<charT, traits, Allocator>& lhs, 
+const basic_string<charT, traits, Allocator>& rhs)
+{
+     return lhs.compare (rhs) <= 0;
+}
+
+template<class charT, class traits, class Allocator> inline bool operator <= 
+ (const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) 
+{
+     return rhs.compare (lhs) >= 0;
+}
+
+template<class charT, class traits, class Allocator>
+inline bool operator <= (const basic_string<charT, traits, Allocator>& lhs, 
+const charT* rhs)
+{
+     return lhs.compare (rhs) <= 0;
+}
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+basic_istream<charT, traits>& 
+operator >> (basic_istream<charT, traits>& is, 
+            basic_string<charT, traits, Allocator>& str)
+{
+    typedef basic_string<charT, traits, Allocator> string_type;
+    typename basic_istream<charT, traits>::sentry s_ (is);
+    if (s_)
+    {
+         traits::int_type c;
+         const int BSIZE = 512;
+         charT buf[BSIZE];
+         int bcnt = 0;
+         #ifdef MSIPL_EXPLICIT_FUNC_TEMPLATE_ARG
+             const ctype<charT>& ctype_ = use_facet <ctype<charT> >(is.getloc ());
+         #else
+             const ctype<charT>& ctype_ = use_facet (is.getloc (), (ctype<charT>)*0);
+         #endif
+         str.clear ();
+         typename string_type::size_type size_max =
+            is.width () ? is.width () : str.max_size (), size_ = 0;
+         while (size_<size_max)
+         {
+              c = is.rdbuf ()->sbumpc ();
+              size_++;
+              if (traits::eq_int_type (c, traits::eof ()))
+              {
+                  is.setstate (ios_base::eofbit);
+                  break;
+              }
+              else if (ctype_.is (ctype_.space, charT(c)))
+              {
+            	  is.rdbuf()->sputbackc (charT(c));			// hh 980223 put whitespace back in stream
+                  break;
+              } else
+              {
+                  if (bcnt == BSIZE)
+                  {
+                      str.append (buf, size_t(bcnt));
+                      bcnt=0;
+                  }
+                  buf[bcnt++] = traits::to_char_type (c);
+              }
+         }
+         if (bcnt != 0)
+             str.append (buf, size_t(bcnt));
+    }
+    return is;
+}
+
+template<class charT, class traits, class Allocator>
+//inline  // hh 980128
+basic_ostream<charT, traits>& 
+operator << (basic_ostream<charT, traits>& os, 
+          const basic_string<charT, traits, Allocator>& str)
+{
+     os << str.c_str();
+     return os;
+}
+
+template<class charT, class traits, class Allocator>
+//inline      // hh 980124
+basic_istream<charT, traits>&
+getline (basic_istream<charT, traits>& is, 
+         basic_string<charT, traits, Allocator>& str, charT delim)
+{
+     typename traits::int_type c;
+     typename basic_string<charT, traits, Allocator>::size_type count = 
+                                                                                str.max_size ();
+     ios_base::iostate flg = ios_base::goodbit;  // state of istream obj.
+     typename basic_istream<charT, traits>::sentry s_ (is, true); 
+     //
+    // don't skip white spaces 
+     //
+     if (s_)                                    
+     {
+          const int BSIZE = 512;
+          charT buf[BSIZE];
+          int bcnt = 0;
+          str.clear ();                    // clear () is used instead of erase ()
+                                         // for better performance.
+          while (count)
+          {
+               c = is.rdbuf ()->sbumpc ();  // try to extract a character
+               if (traits::eq_int_type (c, traits::eof ()))
+               {
+                    flg |= ios_base::eofbit;
+                    break;                   // stop reading - eof was reached
+               }
+
+               --count;                     // a character was extracted
+
+               if (traits::eq_int_type (traits::to_int_type (delim), c))
+                    break;                   // stop reading - delim reached
+
+               if (!count)                  // str.maxsize() reached.
+                    flg |= ios_base::failbit;// set faibit
+ 
+               if (bcnt == BSIZE)
+               {
+                    str.append (buf, size_t(bcnt));  // buffer full, append to str.
+                    bcnt = 0;                // reset buffer pointer
+               }
+               buf[bcnt++] = traits::to_char_type (c);
+          }
+          if (bcnt != 0)
+          str.append (buf, size_t(bcnt));          // empty the buffer
+     }
+     if (count == str.max_size ())        // count == str.max_size =>
+          flg |= ios_base::failbit;        // no characters are extracted.
+
+     if (flg != ios_base::goodbit)        // setstate is called now to avoid  
+          is.setstate (flg);               // throwing eof exception even when no 
+                                         // char is extracted, in which case 
+                                         // failure should be thrown.
+     return is;                           // is.setcount () is removed in 
+                                         // November DWP.
+}
+
+template<class charT, class traits, class Allocator>
+inline basic_istream<charT, traits>&
+getline (basic_istream<charT, traits>& is, 
+         basic_string<charT, traits, Allocator>& str)
+{
+     return getline (is, str, is.widen ('\n')); //traits::newline() no more exists.
+}
+
+#ifndef MSIPL_PARTIAL_SPECIALIZATION
+null_template
+struct iterator_traits <const string*>
+{
+     typedef ptrdiff_t difference_type;
+     typedef const string value_type;
+     typedef random_access_iterator_tag iterator_category;
+     typedef const string *pointer;
+     typedef const string &reference;
+};
+
+null_template
+struct iterator_traits<string*>
+{
+     typedef ptrdiff_t difference_type;
+     typedef string value_type;
+     typedef random_access_iterator_tag iterator_category;
+     typedef string *pointer;
+     typedef string &reference;
+};
+#endif /* MSIPL_PARTIAL_SPECIALIZATION */
+
+#ifdef MSIPL_USING_NAMESPACE
+	} // namespace std
+#endif
+
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import reset
+#endif
+#pragma options align=reset
+
+#undef THR_LEN
+#undef THR_RANGE
+#undef DEFSZ
+
+#endif // RC_INVOKED
+
+#endif /* MSIPL_BSTRING_H */
+
+// hh 971220 fixed MOD_INCLUDE and MOD_C_INCLUDE
+// hh 971221 ::scope deleted in several places
+// hh 971226 file name changed from bstring.h to string
+// hh 971226 made include guards standard
+// hh 971226 moved declaration of npos to top of class
+// hh 971230 added RC_INVOKED wrapper
+// hh 980113 Removed nullbuf.  This was a poorly implemented optimization that leaked memory.
+//           Memory leaks, no matter how small or insignificant are not acceptable.  Not for
+//           any reason.
+// hh 980126 removed () around reverse_iterator (4 places)
+// hh 980223 put whitespace back in stream when extracting string
+// hh 980713 Temporarily moved member templates into class definition to support compiler
+// hh 980803 Several places fixed where bufsize did not leave room for terminating null character.

@@ -1,0 +1,76 @@
+/*  Metrowerks Standard Library  Version 4.0  1998 August 10  */
+
+/*  $Date:: 6/18/98 12:27 PM                                 $ 
+ *  $Revision:: 12                                           $ 
+ *  $NoKeywords: $ 
+ *
+ *		Portions Copyright © 1995-1998 Metrowerks, Inc.
+ *		All rights reserved.
+ */
+
+/**
+ **  iostream      // hh 971222 Changed filename from iostream.h to iostream
+ **
+ **  Lib++  : The Modena C++ Standard Library,
+ **           Version 2.4, October 1997
+ **
+ **  Copyright (c) 1995-1997 Modena Software Inc.
+ **/
+
+#ifndef _IOSTREAM           // hh 971222 Made include guards standard
+#define _IOSTREAM
+
+#include <mcompile.h>
+#include <mutex.h>
+
+#include <istream>    // hh 971220 fixed MOD_INCLUDE
+#include <ostream>    // hh 971220 fixed MOD_INCLUDE
+
+#ifndef RC_INVOKED // hh 971230
+
+#pragma options align=native
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import on
+#endif
+
+#ifdef MSIPL_USING_NAMESPACE
+	namespace std {
+#endif
+/*  // hh 980129 moved into <istream> per standard
+template<class charT,class traits> class basic_iostream
+:public basic_istream<charT,traits>,public basic_ostream<charT,traits>
+{
+public:
+   explicit basic_iostream(basic_streambuf<charT,traits>* sb):basic_istream
+   <charT,traits>(sb),basic_ostream<charT,traits>(sb),
+   basic_ios<charT,traits>(sb)
+     {     }
+   virtual ~basic_iostream()
+     {     }
+};
+*/
+extern istream cin;
+extern ostream cout;
+extern ostream clog;
+extern ostream cerr;
+
+static ios_base::Init  __msipl_ios_init;
+
+#ifdef MSIPL_USING_NAMESPACE
+	} // namespace std 
+#endif
+
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import reset
+#endif
+#pragma options align=reset
+
+#endif // RC_INVOKED
+
+#endif /* MSIPL_IOSTREAM_H */
+
+// hh 971220 fixed MOD_INCLUDE
+// hh 971222 added alignment wrapper
+// hh 971222 Changed filename from iostream.h to iostream
+// hh 971222 Made include guards standard
+// hh 971230 added RC_INVOKED wrapper

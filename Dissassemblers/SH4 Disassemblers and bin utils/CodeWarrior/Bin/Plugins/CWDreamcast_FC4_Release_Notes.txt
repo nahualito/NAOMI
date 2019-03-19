@@ -1,0 +1,142 @@
+========================================================================
+CodeWarrior for Dreamcast FC4 Release Notes
+========================================================================
+
+This text file includes release notes for the following components:
+
+* CodeWarrior for Dreamcast C/C++ Compiler 
+* CodeWarrior for Dreamcast Linker 
+* CodeWarrior for Dreamcast Stand-Alone Assembler
+
+
+
+
+
+========================================================================
+CodeWarrior for Dreamcast C/C++ Compiler Release Notes 
+========================================================================
+
+Version: R1-FC4
+Date:    18 June 1999
+
+========================================================================
+New Features in This Version
+========================================================================
+
+* None
+
+========================================================================
+Bugs Fixed in This Version
+========================================================================
+
+* fixes a bug with switch statement when the type of the switch expression
+  is an unsigned int. In that case some case labels would not be found.
+
+* fixes a bug with type conversions of float to unsigned char and
+  unsigned char to float
+
+* fixes a bug with type conversions of float to unsigned short and
+  unsigned short to float
+
+* fixes a bug with the copy of a structure when the size of the structure is
+  more than 255 bytes.
+
+* fixes a bug where the register R0 used to return a function value would be 
+  overwritten.
+
+========================================================================
+Additional Notes
+========================================================================
+
+* None
+
+
+
+
+
+========================================================================
+CodeWarrior for Dreamcast Linker Release Notes 
+========================================================================
+
+Version: R1-FC4
+Date:    18 June 1999
+
+========================================================================
+New Features in This Version
+========================================================================
+
+* $REF_INCLUDE directive.
+  All symbols and sections listed in a $REF_INCLUDE section in the
+  linker command file will be forced in closure (included in the output)
+  if the containing file is referenced.
+
+     Example:
+
+     $REF_INCLUDE
+     {
+             .rodata
+     }
+     
+========================================================================
+Additional Notes
+========================================================================
+
+* None
+
+
+
+
+
+======================================================================
+CodeWarrior for Dreamcast Stand-Alone Assembler Release Notes
+======================================================================
+
+Version: R1-FC4
+Date   : 18 June 1999
+
+
+======================================================================
+Known Problems and Incompatibilities
+======================================================================
+
+* None
+
+
+======================================================================
+Features
+======================================================================
+
+* None
+
+
+======================================================================
+Enhancements
+======================================================================
+
+* [100399] Endianess is read from the SH target preference panel if a
+  file does not specify its endianess using a .endian directive
+
+
+======================================================================
+Bug Fixes
+======================================================================
+
+* [270599] Immediate values which contained arithmetic expressions and
+  used parenthesis where not expanded correctly.  
+
+  For example, 
+
+          add #8*(3*4),r1
+
+  would cause an assembler error, but
+
+          add #(8*3)*4,r1
+
+  would assemble correctly.
+
+
+* [070699] Invalid macros would sometimes crash the assembler.  
+
+
+=
+Metrowerks Corporation

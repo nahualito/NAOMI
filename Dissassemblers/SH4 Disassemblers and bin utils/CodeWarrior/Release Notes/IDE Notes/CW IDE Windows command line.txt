@@ -1,0 +1,56 @@
+=============================
+CodeWarrior IDE Release Notes
+=============================
+
+Version: CodeWarrior IDE 3.2b1
+Date:    August 7, 1998
+
+This document describes the new command line switches for
+the CodeWarrior IDE version 3.2 for Windows.
+
+/t targetname		specifies a target to become the current target
+
+/r			remove objects of the current target before building
+
+/b			build the current target
+
+/c			close the project after building
+
+/q			quit the IDE after building
+
+/v y|n|a		option for converting projects on open
+			(y = convert without asking; n = don't convert;
+                         a =ask whether to convert)
+
+/s			Forces the command line to be processed in a new
+                        instance of the IDE (rather than using a current instance)
+
+
+Notes:
+
+1) If more than one project document is specified to be opened in the
+command line, the /t and build command flags apply to the first project
+document found in the list of documents. If no project is specified in the 
+command line, it will use the usual logic in the IDE (front project or 
+default project) to figure out which project to build.
+If no target is specified it uses whatever the current target
+is for that project.
+
+2) All build commands are executed in a different process from the one
+launched from the command line. The original process will return as soon
+as the command line has been completely processed and the build
+has completed.
+
+3) The following codes are returned:
+
+0	no error
+1	error opening file
+2	project not open
+3	IDE is already building
+4	invalid target name (for /t flag)
+5	error changing current target
+6	error removing objects
+7	build was cancelled
+8	build failed
+9	process aborted
+

@@ -1,0 +1,12 @@
+990409	AS	cctype
+Removed the inline functions for c++, must rely on HiC's implementation.
+
+990421	AS
+Updated MSL C++ Common folder to MSL_5008.1 sources.
+Changed mslconfig to reflect C++ for Dreamcast.
+
+990422	AS
+The shinobi libraries define bool as an enum.
+To support this every template which returns a bool must be cast to bool.
+
+

@@ -1,0 +1,35 @@
+Installation:
+   CodeWarrior for Dreamcast
+
+Target Directory:
+   C:\Katana\CodeWarrior
+
+Disk Space Required:
+   152 MB
+
+Program Folder:
+   CodeWarrior Dreamcast
+
+Setup Type:
+   Full CodeWarrior Installation
+
+CodeWarrior IDE desktop icon created
+
+File Components Installed:
+   Fonts
+   System Files
+   CodeWarrior IDE
+   Dreamcast Support
+   MSL C++ Hitachi C Support
+   Dreamcast Target
+   Dreamcast Examples
+   CodeWarrior Documentation:
+      C Compilers Reference
+      Debugger Guide
+      Error Reference
+      IDE User Guide
+      MSL C++ Reference
+      SH Assembler Reference
+      Targeting Dreamcast
+      Plugin API
+      ClearCase

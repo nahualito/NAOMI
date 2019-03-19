@@ -1,0 +1,156 @@
+File extension associations entered into the Registry (HKEY_CLASSES_ROOT):
+
+CodeWarrior Debug Preferences
+   .dbg
+   CodeWarrior_dbg
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+CodeWarrior Disassembled File
+   .dump
+   CodeWarrior_dump
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+CodeWarrior Dwarf Debug Symbols
+   .dwf
+   CodeWarrior_dwf
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+CodeWarrior Project
+   .mcp
+   CodeWarrior_mcp
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+CodeWarrior Settings
+   .stg
+   CodeWarrior_stg
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+CodeWarrior Target Info
+   .tdt
+   CodeWarrior_tdt
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+C Source File
+   .c
+   CodeWarrior_c
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+C Inline Source
+   .i
+   CodeWarrior_i
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+C++ Source File
+   .c++
+   CodeWarrior_c++
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+C++ Source File
+   .cc
+   CodeWarrior_cc
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+C++ Source File
+   .cp
+   CodeWarrior_cp
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+C++ Source File
+   .cpp
+   CodeWarrior_cpp
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+C++ Inline Source
+   .icc
+   CodeWarrior_icc
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+Objective C++ Source File
+   .mm
+   CodeWarrior_mm
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+C/C++ Header File
+   .h
+   CodeWarrior_h
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+C++ Header File
+   .hh
+   CodeWarrior_hh
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+C++ Header File
+   .hpp
+   CodeWarrior_hpp
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+C++ Precompiled Header
+   .mch
+   CodeWarrior_mch
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+Precompiled Header
+   .pch
+   CodeWarrior_pch
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+Precompiled Header
+   .pch++
+   CodeWarrior_pch++
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+Assembly Source
+   .a
+   CodeWarrior_a
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+Assembly Source
+   .asm
+   CodeWarrior_asm
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+Assembly Source
+   .s
+   CodeWarrior_s
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+Exported Symbol File
+   .exp
+   CodeWarrior_exp
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+CodeWarrior Link Map
+   .iMAP
+   CodeWarrior_iMAP
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+CodeWarrior Intel Debug Symbols
+   .iSYM
+   CodeWarrior_iSYM
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+CodeWarrior Linker Command File
+   .lcf
+   CodeWarrior_lcf
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+Library
+   .lib
+   CodeWarrior_lib
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+CodeWarrior Link Map
+   .MAP
+   CodeWarrior_MAP
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+Coff Object File
+   .obj
+   CodeWarrior_obj
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"
+
+CodeWarrior Link Map
+   .xMAP
+   CodeWarrior_xMAP
+   Mapped to "C:\Katana\CodeWarrior\CodeWarrior\bin\IDE.EXE"

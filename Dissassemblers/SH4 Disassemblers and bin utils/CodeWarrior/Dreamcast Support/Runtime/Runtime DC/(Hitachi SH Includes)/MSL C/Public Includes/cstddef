@@ -1,0 +1,57 @@
+/*  Metrowerks Standard Library  Version 4.0  1998 August 10  */
+
+/*  $Date:: 6/5/98 2:32 PM                                   $ 
+ *  $Revision:: 5                                            $ 
+ *  $NoKeywords: $ 
+ *
+ *		Copyright © 1995-1998 Metrowerks, Inc.
+ *		All rights reserved.
+ */
+
+/*
+ *	cstddef         hh  971206  filename usded to be stddef.h
+ */
+ 
+#ifndef __cstddef__
+#define __cstddef__
+
+#include <ansi_parms.h>
+
+#ifndef RC_INVOKED   /* hh 971230 */
+
+#ifdef __cplusplus        /* hh  971206 */
+	#ifdef _MSL_USING_NAMESPACE
+		namespace std {
+	#endif
+	extern "C" {
+#endif
+
+typedef long	ptrdiff_t;
+
+#if !__cplusplus || !__option(wchar_type)  /* 971215  vss  */ /* hh 980120 moved from wchar_t.h */
+	typedef unsigned short wchar_t;
+#endif
+
+#ifdef __cplusplus       /* hh  971206 */
+	}
+	#ifdef _MSL_USING_NAMESPACE
+		}
+	#endif
+#endif
+
+#endif /* RC_INVOKED */
+
+#include <size_t.h>
+/*#include <wchar_t.h>*/
+#include <null.h>
+
+/* hh 980727 */
+#define offsetof(type, member)	((__std()size_t) &(((type *) 0)->member))
+
+#endif /* __cstddef__ */
+/*     Change record
+ * hh  971206 Changed filename from stddef.h to cstddef and added namespace support.
+ * hh 971230 added RC_INVOKED wrapper
+ * hh 980120 moved wchart_ typedef from wchar_t.h 
+ * hh 980727 Added __std() into the offsetof definition
+*/

@@ -1,0 +1,102 @@
+/*  Metrowerks Standard Library  Version 4.0  1998 August 10  */
+
+/*  $Date:: 6/5/98 2:31 PM                                   $ 
+ *  $Revision:: 6                                            $ 
+ *  $NoKeywords: $ 
+ *
+ *		Copyright © 1995-1998 Metrowerks, Inc.
+ *		All rights reserved.
+ */
+
+/*
+ *	climits         hh  971206 filename used to be limits.h
+ */
+ 
+#ifndef __climits__
+#define __climits__
+
+#include <ansi_parms.h>                     /* mm 970804 */
+
+#ifndef RC_INVOKED   /* hh 971230 */
+
+#if defined(__cplusplus) && defined(_MSL_USING_NAMESPACE)
+	namespace std {}
+#endif
+
+#define CHAR_BIT			8
+
+#define SCHAR_MIN			(-127-1)
+#define SCHAR_MAX			  127
+
+#define	UCHAR_MAX			255U
+
+#define CHAR_MIN			SCHAR_MIN
+#define CHAR_MAX			SCHAR_MAX
+
+#define MB_LEN_MAX		1
+
+#define SHRT_MIN			(-32767-1)
+#define SHRT_MAX			  32767
+
+#define USHRT_MAX			65535U
+
+#define LONG_MIN			(-2147483647L-1)
+#define LONG_MAX			  2147483647L
+
+#define ULONG_MAX			4294967295U
+#ifdef __MC68K__
+#if __fourbyteints__
+
+	#define	INT_MIN			LONG_MIN
+	#define INT_MAX			LONG_MAX
+	#define UINT_MAX		ULONG_MAX
+
+#else
+
+	#define	INT_MIN			SHRT_MIN
+	#define INT_MAX			SHRT_MAX
+	#define UINT_MAX		USHRT_MAX
+	
+#endif /* __fourbyteints__ */
+#else
+    #define	INT_MIN	        LONG_MIN
+	#define INT_MAX	        LONG_MAX
+	#define UINT_MAX        ULONG_MAX
+#endif /* end __MC68K__ */
+
+#ifdef	__MSL_LONGLONG_SUPPORT__
+/*	970216 bkoz want this
+    #define LONGLONG_MIN   (-9223372036854775807LL - 1)
+	#define LONGLONG_MAX     9223372036854775807LL
+	#define ULONGLONG_MAX   18446744073709551615ULL
+*/
+	#define LLONG_MIN    (-9223372036854775807 - 1)  /* hh 980107 changed names of long long macros to support standard */
+	#define LLONG_MAX     9223372036854775807
+	#define ULLONG_MAX     0xffffffffffffffff
+
+#else
+	#define LLONG_MIN    	LONG_MIN
+	#define LLONG_MAX     	LONG_MAX
+	#define ULLONG_MAX     	ULONG_MAX
+#endif
+
+#if macintosh && !defined(__dest_os)               /*MW-mm 960927a*/
+  #define __dest_os __mac_os                       /*MW-mm 960927a*/
+#endif                                             /*MW-mm 960927a*/
+
+#endif /* RC_INVOKED */
+
+#if __dest_os == __be_os
+	#include <limits.be.h>
+#endif
+
+#endif /* __climits__ */
+/*     Change record
+961216 bkoz line 49 added long long typedefs
+970214 bkoz added default __dest_os __mac_os
+* mm 970804 Added include of ansi_parms.h to ensure __mac_os, __be_os, etc are defined.
+* hh  971206 Changed filename from limits.h to climits and added namespace support
+ * hh 971230 added RC_INVOKED wrapper
+ * hh 980107 changed names of long long macros to support standard
+*/
+

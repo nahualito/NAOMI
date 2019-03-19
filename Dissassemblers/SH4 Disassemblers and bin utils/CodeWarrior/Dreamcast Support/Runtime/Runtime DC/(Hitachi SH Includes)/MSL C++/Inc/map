@@ -1,0 +1,549 @@
+/*  Metrowerks Standard Library  Version 4.0  1998 August 10  */
+
+/*  $Date:: 3/10/98 8:19 PM                                  $ 
+ *  $Revision:: 11                                           $ 
+ *  $NoKeywords: $ 
+ *
+ *		Portions Copyright © 1995-1998 Metrowerks, Inc.
+ *		All rights reserved.
+ */
+
+/**
+ **  map          // hh 971222 Changed filename from map.h to map
+ **
+ **  Lib++  : The Modena C++ Standard Library,
+ **           Version 2.4, October 1997
+ **
+ **  Copyright (c) 1995-1997 Modena Software Inc.
+ **/
+
+#ifndef _MAP            // hh 971222 Made include guards standard
+#define _MAP
+
+#include <mcompile.h>
+
+#include <tree.h>    // hh 971220 fixed MOD_INCLUDE
+
+#ifndef RC_INVOKED // hh 971230
+
+#pragma options align=native
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import on
+#endif
+
+#ifdef MSIPL_USING_NAMESPACE
+	namespace std {
+#endif
+
+// Subclause 23.3.1 -- class map
+
+template <class Key, class T, class DEFTEMPARG (Compare, less<Key>), 
+//          class DEFTEMPARG (Allocator, allocator<pair<const Key, T> >) >  // hh 980805 changed default allocator
+          class Allocator = allocator<pair<const Key, T> > >  // hh 980805 and the DEFTEMPARG doesn't work here.
+class map {
+
+public:
+    typedef Key                            key_type;
+    typedef T                              mapped_type;
+    typedef pair<M_CONST Key, T>           value_type;
+    typedef Compare                        key_compare;
+    typedef ALLOC_BIND (value_type)         allocator_type;
+    typedef rb_tree<key_type, value_type, select1st<value_type, key_type>, 
+                    key_compare, allocator_type> rep_type;
+
+private:
+    rep_type t;  // red-black tree representing map
+
+public:
+    typedef typename rep_type::reference               reference;
+    typedef typename rep_type::const_reference         const_reference;
+    typedef typename rep_type::iterator                iterator;
+    typedef typename rep_type::const_iterator          const_iterator;
+    typedef typename rep_type::size_type               size_type;
+    typedef typename rep_type::difference_type         difference_type;
+    typedef typename rep_type::pointer                 pointer;
+    typedef typename rep_type::const_pointer           const_pointer;
+    typedef typename rep_type::reverse_iterator        reverse_iterator;
+    typedef typename rep_type::const_reverse_iterator  const_reverse_iterator;
+    
+    class value_compare
+        : public binary_function<value_type, value_type, bool> {
+
+        friend class map<Key, T, Compare, Allocator>;
+
+    protected :
+        Compare comp;
+        value_compare (Compare c) : comp (c) {}
+
+    public:
+        bool operator () (const value_type& x, const value_type& y) const
+        {
+            return comp (x.first, y.first);
+        }
+    };
+
+
+public:
+    // 23.3.1.2  construct/copy/destroy:
+    explicit
+    map (const Compare& comp = Compare (), 
+#ifdef MSIPL_MEMBER_TEMPLATE
+         const Allocator& alloc = Allocator ())
+#else
+         const allocator_type& alloc = allocator_type ())
+#endif
+    : t (comp, alloc) { }
+
+#ifdef MSIPL_MEMBER_TEMPLATE
+    template <class InputIterator>
+    map (InputIterator first, InputIterator last, 
+         const Compare& comp = Compare (), 
+         const Allocator& alloc = Allocator ())
+    : t (comp, alloc) { for (; first != last; ++first)  insert (*first); }
+#else
+    map (const value_type* first, const value_type* last, 
+         const Compare& comp = Compare (), 
+         const allocator_type& alloc = allocator_type ())
+    : t (comp, alloc) { for (; first != last; ++first)  insert (*first); }
+    map (iterator first, iterator last, 
+         const Compare& comp = Compare (), 
+         const allocator_type& alloc = allocator_type ())
+    : t (comp, alloc) { for (; first != last; ++first)  insert (*first); }
+    map (const_iterator first, const_iterator last, 
+         const Compare& comp = Compare (), 
+         const allocator_type& alloc = allocator_type ())
+    : t (comp, alloc) { for (; first != last; ++first)  insert (*first); }
+#endif
+
+    map (const map<Key, T, Compare, Allocator>& x)
+    : t (x.t) {}
+
+    map<Key, T, Compare, Allocator>& 
+    operator= (const map<Key, T, Compare, Allocator>& x)
+    {
+        t = x.t;
+        return *this; 
+    }
+
+    allocator_type get_allocator () const
+    {
+        return t.get_allocator ();
+    }
+
+    //
+    // 23.3.1.3  iterators:
+    //
+    iterator               begin ()          { return t.begin ();    }
+    const_iterator         begin ()    const { return t.begin ();    }
+    iterator               end ()            { return t.end ();      }
+    const_iterator         end ()      const { return t.end ();      }
+    reverse_iterator       rbegin ()         { return t.rbegin ();   }
+    const_reverse_iterator rbegin ()   const { return t.rbegin ();   }
+    reverse_iterator       rend ()           { return t.rend ();     }
+    const_reverse_iterator rend ()     const { return t.rend ();     }
+
+    // 23.3.1.4  capacity:
+    bool                   empty ()    const { return t.empty ();    }
+    size_type              size ()     const { return t.size ();     }
+    size_type              max_size () const { return t.max_size (); }
+
+    // 23.3.1.5  element access:
+    mapped_type& operator[] (const key_type& k)
+    {
+        return (*((insert (value_type (k, T ()))).first)).second;
+    }
+
+    // 23.3.1.6  modifiers
+    typedef pair<iterator, bool> pair_iterator_bool; 
+
+    pair_iterator_bool insert (const value_type& x) 
+    { 
+        return t.insert_unique (x); 
+    }
+    iterator insert (iterator position, const value_type& x)
+    {
+        return t.insert_unique (position, x);
+    }
+
+#ifdef MSIPL_MEMBER_TEMPLATE
+    template <class InputIterator>
+    void insert (InputIterator first, InputIterator last)
+    {
+        t.insert_unique (first, last);
+    }
+#else
+    void insert (const value_type* first, const value_type* last)
+    {
+        t.insert_unique (first, last);
+    }
+    void insert (const_iterator first, const_iterator last)
+    {
+        t.insert_unique (first, last);
+    }
+#endif
+
+    void  erase (iterator position) 
+    {
+        t.erase (position);
+    }
+    size_type erase (const key_type& x) 
+    { 
+        return t.erase (x); 
+    }
+    void  erase (iterator first, iterator last)
+    { 
+        t.erase (first, last); 
+    }
+
+    void swap (map<Key, T, Compare, Allocator>& x) 
+    { 
+        t.swap (x.t); 
+    }
+
+    void clear () 
+    { 
+       t.clear ();
+    }
+
+    //
+    // 23.3.1.7  Observers
+    //
+    key_compare key_comp ()     const { return t.key_comp (); }
+    value_compare value_comp () const { return value_compare (t.key_comp ()); }
+
+    //
+    // 23.3.1.8  Map operations:
+    //
+    iterator       find (const key_type& x)       { return t.find (x);  }
+    const_iterator find (const key_type& x) const { return t.find (x);  }
+    size_type count (const key_type& x) const     { return t.count (x); }
+
+    iterator lower_bound (const key_type& x) 
+     { 
+          return t.lower_bound (x); 
+     }
+    const_iterator lower_bound (const key_type& x) const
+    {
+        return t.lower_bound (x); 
+    }
+
+    iterator upper_bound (const key_type& x) 
+     { 
+          return t.upper_bound (x); 
+     }
+    const_iterator upper_bound (const key_type& x) const
+    {
+        return t.upper_bound (x); 
+    }
+
+    typedef pair<iterator, iterator> pair_iterator_iterator; 
+
+    pair_iterator_iterator equal_range (const key_type& x)
+    {
+        return t.equal_range (x);
+    }
+
+    typedef pair<const_iterator, const_iterator> pair_citerator_citerator; 
+
+    pair_citerator_citerator equal_range (const key_type& x) const
+    {
+        return t.equal_range (x);
+    }
+};
+
+template <class Key, class T, class Compare, class Allocator>
+inline bool operator== (const map<Key, T, Compare, Allocator>& x, 
+                        const map<Key, T, Compare, Allocator>& y)
+{ return x.size () == y.size () && equal (x.begin (), x.end (), y.begin ()); }
+
+template <class Key, class T, class Compare, class Allocator>
+inline bool operator< (const map<Key, T, Compare, Allocator>& x, 
+                       const map<Key, T, Compare, Allocator>& y)
+{ return lexicographical_compare (x.begin (), x.end (), y.begin (), y.end ()); }
+
+template <class Key, class T, class Compare, class Allocator>
+inline bool operator!= (const map<Key, T, Compare, Allocator>& x, 
+                        const map<Key, T, Compare, Allocator>& y)
+{ return ! (x == y); }
+
+template <class Key, class T, class Compare, class Allocator>
+inline bool operator<= (const map<Key, T, Compare, Allocator>& x, 
+                       const map<Key, T, Compare, Allocator>& y)
+{ return ! (y < x); }
+
+template <class Key, class T, class Compare, class Allocator>
+inline bool operator>= (const map<Key, T, Compare, Allocator>& x, 
+                        const map<Key, T, Compare, Allocator>& y)
+{ return ! (x < y); }
+
+template <class Key, class T, class Compare, class Allocator>
+inline bool operator> (const map<Key, T, Compare, Allocator>& x, 
+                       const map<Key, T, Compare, Allocator>& y)
+{ return (y < x); }
+
+template <class Key, class T, class Compare, class Allocator>
+inline void swap (const map<Key, T, Compare, Allocator>& x, 
+                  const map<Key, T, Compare, Allocator>& y)
+{ x.swap (y); }
+
+// Subclause 23.3.2 -- class multimap
+
+template <class Key, class T, class DEFTEMPARG (Compare, less<Key>), 
+//          class DEFTEMPARG (Allocator, allocator<pair<const Key, T> >) >  // hh 980805 changed default allocator
+          class Allocator = allocator<pair<const Key, T> > >  // hh 980805 and the DEFTEMPARG doesn't work here.
+class multimap {
+
+public:
+    typedef Key                          key_type;
+    typedef T                            mapped_type;
+    typedef pair<M_CONST Key, T>         value_type;
+    typedef Compare                      key_compare;
+    typedef ALLOC_BIND (value_type)           allocator_type;
+    typedef rb_tree<key_type, value_type, select1st<value_type, key_type>, 
+                    key_compare, allocator_type> rep_type;
+
+private:
+    rep_type t;  // red-black tree representing multimap
+
+public:
+    typedef typename rep_type::reference                reference;
+    typedef typename rep_type::const_reference          const_reference;
+    typedef typename rep_type::iterator                 iterator;
+    typedef typename rep_type::const_iterator           const_iterator; 
+    typedef typename rep_type::size_type                size_type;
+    typedef typename rep_type::difference_type          difference_type;
+    typedef typename rep_type::pointer                  pointer;
+    typedef typename rep_type::const_pointer            const_pointer;
+    typedef typename rep_type::reverse_iterator         reverse_iterator;
+    typedef typename rep_type::const_reverse_iterator   const_reverse_iterator;
+
+    class value_compare
+        : public binary_function<value_type, value_type, bool> {
+
+        friend class multimap<Key, T, Compare, Allocator>;
+
+    protected:
+        Compare comp;
+        value_compare (Compare c) : comp (c) {}
+
+    public:
+        bool operator () (const value_type& x, const value_type& y) const
+        {
+            return comp (x.first, y.first);
+        }
+    };
+
+public:
+    // construct/copy/destroy
+    explicit
+    multimap (const Compare& comp = Compare (), 
+#ifdef MSIPL_MEMBER_TEMPLATE
+              const Allocator& alloc = Allocator ())
+#else
+              const allocator_type& alloc = allocator_type ())
+#endif
+    : t (comp, alloc) { }
+
+#ifdef MSIPL_MEMBER_TEMPLATE
+    template <class InputIterator>
+    multimap (InputIterator first, InputIterator last, 
+              const Compare& comp = Compare (), 
+              const Allocator& alloc = Allocator ())
+    : t (comp, alloc) { for (; first != last; ++first)  insert (*first); }
+#else
+    multimap (const_iterator first, const_iterator last, 
+              const Compare& comp = Compare (), 
+              const allocator_type& alloc = allocator_type ())
+    : t (comp, alloc) { for (; first != last; ++first)  insert (*first); }
+
+    multimap (const value_type* first, const value_type* last, 
+              const Compare& comp = Compare (), 
+              const allocator_type& alloc = allocator_type ())
+    : t (comp, alloc) { for (; first != last; ++first)  insert (*first); }
+#endif
+
+    multimap (const multimap<Key, T, Compare, Allocator>& x)
+    : t (x.t) { }
+
+    multimap<Key, T, Compare, Allocator>&
+    operator= (const multimap<Key, T, Compare, Allocator>& x)
+    {
+        t = x.t;
+        return *this; 
+    }
+
+    allocator_type get_allocator () const
+    {
+        return t.get_allocator ();
+    }
+
+    //
+    // iterators:
+    //
+    iterator               begin ()           { return t.begin ();    }
+    const_iterator         begin ()     const { return t.begin ();    }
+    iterator               end ()             { return t.end ();      }
+    const_iterator         end ()       const { return t.end ();      }
+
+    reverse_iterator       rbegin ()          { return t.rbegin ();   }
+    const_reverse_iterator rbegin ()    const { return t.rbegin ();   }
+    reverse_iterator       rend ()            { return t.rend ();     }
+    const_reverse_iterator rend ()      const { return t.rend ();     }
+
+    //
+    //  capacity:
+    //
+    bool                   empty ()     const { return t.empty ();    }
+    size_type              size ()      const { return t.size ();     }
+    size_type              max_size ()  const { return t.max_size (); }
+
+    //
+    // modifiers
+    //
+    iterator insert (const value_type& x) { return t.insert_equal (x); }
+
+    iterator insert (iterator position, const value_type& x)
+    {
+        return t.insert_equal (position, x);
+    }
+
+#ifdef MSIPL_MEMBER_TEMPLATE
+    template <class InputIterator>
+    void insert (InputIterator first, InputIterator last)
+    {
+        t.insert_equal (first, last);
+    }
+#else
+    void insert (const value_type* first, const value_type* last)
+    {
+        t.insert_equal (first, last);
+    }
+    void insert (iterator first, iterator last)
+    {
+        t.insert_equal (first, last);
+    }
+    void insert (const_iterator first, const_iterator last)
+    {
+        t.insert_equal (first, last);
+    }
+#endif
+
+    void erase (iterator position)
+    { 
+        t.erase (position);
+    }
+
+    size_type erase (const key_type& x) 
+    { 
+        return t.erase (x); 
+    }
+
+    void erase (iterator first, iterator last)
+    { 
+        t.erase (first, last);
+    }
+
+    void swap (multimap<Key, T, Compare, Allocator>& x) { t.swap (x.t); }
+
+    void clear () { t.clear (); }
+
+    //
+    // accessors:
+    //
+    key_compare   key_comp ()   const { return t.key_comp (); }
+    value_compare value_comp () const { return value_compare (t.key_comp ()); }
+
+    //
+    // map operations:
+    //
+    iterator       find (const key_type& x)        { return t.find (x); }
+    const_iterator find (const key_type& x)  const { return t.find (x); }
+    size_type      count (const key_type& x) const { return t.count (x); }
+
+    iterator       lower_bound (const key_type& x) 
+    { 
+        return t.lower_bound (x); 
+    }
+    const_iterator lower_bound (const key_type& x) const
+    {
+        return t.lower_bound (x); 
+    }
+
+    iterator upper_bound (const key_type& x)
+    { 
+        return t.upper_bound (x); 
+    }
+    const_iterator upper_bound (const key_type& x) const
+    {
+        return t.upper_bound (x); 
+    }
+
+    typedef  pair<iterator, iterator>             pair_iterator_iterator;
+    typedef  pair<const_iterator, const_iterator> pair_citerator_citerator;
+
+    pair_iterator_iterator equal_range (const key_type& x)
+    {
+        return t.equal_range (x);
+    }
+    pair_citerator_citerator equal_range (const key_type& x) const
+    {
+        return t.equal_range (x);
+    }
+};
+
+template <class Key, class T, class Compare, class Allocator>
+inline bool operator== (const multimap<Key, T, Compare, Allocator>& x, 
+                       const multimap<Key, T, Compare, Allocator>& y)
+{ return x.size () == y.size () &&
+           equal (x.begin (), x.end (), y.begin ()); }
+
+template <class Key, class T, class Compare, class Allocator>
+inline bool operator< (const multimap<Key, T, Compare, Allocator>& x, 
+                      const multimap<Key, T, Compare, Allocator>& y)
+{ return lexicographical_compare (x.begin (), x.end (), 
+                                    y.begin (), y.end ()); }
+
+template <class Key, class T, class Compare, class Allocator>
+inline bool operator!= (const multimap<Key, T, Compare, Allocator>& x, 
+                       const multimap<Key, T, Compare, Allocator>& y)
+{ return ! (x == y); }
+
+template <class Key, class T, class Compare, class Allocator>
+inline bool operator<= (const multimap<Key, T, Compare, Allocator>& x, 
+                      const multimap<Key, T, Compare, Allocator>& y)
+{ return ! ( y < x); }
+
+template <class Key, class T, class Compare, class Allocator>
+inline bool operator>= (const multimap<Key, T, Compare, Allocator>& x, 
+                       const multimap<Key, T, Compare, Allocator>& y)
+{ return ! ( x < y); }
+
+template <class Key, class T, class Compare, class Allocator>
+inline bool operator> (const multimap<Key, T, Compare, Allocator>& x, 
+                      const multimap<Key, T, Compare, Allocator>& y)
+{ return (y < x); }
+
+template <class Key, class T, class Compare, class Allocator>
+inline void swap (const multimap<Key, T, Compare, Allocator>& x, 
+                  const multimap<Key, T, Compare, Allocator>& y)
+{ x.swap (y); }
+
+#ifdef MSIPL_USING_NAMESPACE
+	} // namespace std
+#endif
+
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import reset
+#endif
+#pragma options align=reset
+
+#endif // RC_INVOKED
+
+#endif /* MSIPL_MAP_H */
+
+// hh 971220 fixed MOD_INCLUDE
+// hh 971222 added alignment wrapper
+// hh 971222 Changed filename from map.h to map
+// hh 971222 Made include guards standard
+// hh 971230 added RC_INVOKED wrapper
+// hh 980805 changed default allocator

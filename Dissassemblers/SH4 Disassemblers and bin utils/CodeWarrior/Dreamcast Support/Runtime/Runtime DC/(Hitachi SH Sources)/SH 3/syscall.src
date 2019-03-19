@@ -1,0 +1,17 @@
+		.ENDIAN		LITTLE
+		.EXPORT     ___syscall
+		.EXPORT     ___sysc_etc
+
+		.SECTION    .text
+		.ALIGN		4
+
+___syscall:
+		MOV		R4,R0
+		MOV		R5,R2
+___sysc_etc:
+		NOP
+		MOV		R0,R0
+		RTS
+		NOP
+	
+	  .END

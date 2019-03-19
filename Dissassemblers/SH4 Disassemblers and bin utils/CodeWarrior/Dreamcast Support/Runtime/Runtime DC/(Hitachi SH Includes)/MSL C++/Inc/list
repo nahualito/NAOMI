@@ -1,0 +1,935 @@
+/*  Metrowerks Standard Library  Version 4.0  1998 August 10  */
+
+/*  $Date:: 3/10/98 8:17 PM                                  $ 
+ *  $Revision:: 11                                           $ 
+ *  $NoKeywords: $ 
+ *
+ *		Portions Copyright © 1995-1998 Metrowerks, Inc.
+ *		All rights reserved.
+ */
+
+/**
+ **  list       // hh 971222 Changed filename from list.h to list
+ **
+ **  Lib++  : The Modena C++ Standard Library,
+ **           Version 2.4, October 1997
+ **
+ **  Copyright (c) 1995-1997 Modena Software Inc.
+ **/
+
+#ifndef _LIST          // hh 971207 Made include guards standard
+#define _LIST
+ 
+#include <mcompile.h>
+ 
+#include <memory>       // hh 971220 fixed MOD_INCLUDE
+#include <algobase.h>   // hh 971220 fixed MOD_INCLUDE
+
+// hh 980111 Not needed.
+//#ifdef MSIPL_ANSI_HEADER
+//#include <stdexcept>    // hh 971220 fixed MOD_INCLUDE
+//#else
+//#include <mexcept.h>    // hh 971220 fixed MOD_INCLUDE
+//#endif
+
+#ifndef RC_INVOKED // hh 971230
+
+#pragma options align=native
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import on
+#endif
+
+#ifdef MSIPL_USING_NAMESPACE
+	namespace std {
+#endif
+
+template <class T, class DEFTEMPARG (Allocator, allocator<T>) >
+class list {
+
+public:
+     struct list_node;
+     class iterator;
+     class const_iterator;
+     friend class iterator;
+     friend class const_iterator;
+
+     typedef typename Allocator::reference         reference;
+     typedef typename Allocator::const_reference   const_reference;
+     typedef          T                            value_type;
+     typedef          Allocator                    allocator_type;
+     typedef typename Allocator::pointer           pointer;
+     typedef typename Allocator::const_pointer     const_pointer;
+     typedef reverse_iterator<const_iterator>      const_reverse_iterator;
+     typedef reverse_iterator<iterator>            reverse_iterator;
+     typedef ALLOC_BIND (list_node)                 list_node_allocator_type;
+     typedef typename list_node_allocator_type::pointer         link_type;
+     typedef typename list_node_allocator_type::size_type       size_type;
+     typedef typename list_node_allocator_type::difference_type difference_type;
+
+     struct list_node {
+          link_type next;
+          link_type prev;
+          T data;
+     };
+ 
+protected:
+     link_type                     head;
+     size_type                     length;
+     link_type                     cache;
+     Allocator                     value_allocator;
+     list_node_allocator_type      list_node_allocator;
+     DEC_OBJ_LOCK(_mutex)
+
+     link_type get_node ()
+     {
+          WRITE_LOCK(_mutex);
+          link_type tmp = cache;
+          if (cache) 
+               cache = (link_type)cache->next;
+          else 
+               tmp = list_node_allocator.allocate ((size_type)1);
+          tmp->next = tmp->prev = tmp;
+          return tmp;
+     }
+
+public:
+     class iterator
+          : public MSIPLSTD::iterator<bidirectional_iterator_tag, T, 
+                                      difference_type, pointer, reference>
+     {
+          friend class list<T, Allocator>;
+          friend class list<T, Allocator>::const_iterator;  // hh 971222 Added qualified name
+
+     protected:
+          link_type node;
+          DEC_OBJ_LOCK(*iter_mutex)
+
+		#ifdef MSIPL_OBJECT_LOCK   // hh 980106 rewrote to silence unused arg warning
+			iterator (link_type x, const list<T, Allocator>* ptr)
+				: node (x),
+				iter_mutex (&((list<T, Allocator>*)ptr)->_mutex)
+			{
+			}
+		#else
+			iterator (link_type x, const list<T, Allocator>*)
+				: node (x)
+			{
+			}
+		#endif
+
+     public:
+          iterator () : node (0)
+     #ifdef MSIPL_OBJECT_LOCK
+          , iter_mutex (0)
+     #endif
+          {} 
+
+          ~iterator () {}
+
+          bool operator== (const iterator& x) const
+          { 
+               READ_LOCK(*iter_mutex); 
+               { READ_LOCK(*(x.iter_mutex)); 
+               return node == x.node; }
+          }
+ 
+          bool operator== (const list<T, Allocator>::const_iterator& x) const     // hh 971222 Added qualified name to const_iterator
+          { 
+               READ_LOCK(*iter_mutex); 
+               { READ_LOCK(*(x.iter_mutex)); 
+               return node == x.node; }
+          } 
+
+          bool operator!= (const iterator& x) const
+          { 
+               READ_LOCK(*iter_mutex); 
+               { READ_LOCK(*(x.iter_mutex)); 
+               return node != x.node; }
+          } 
+          bool operator!= (const list<T, Allocator>::const_iterator& x) const     // hh 971222 Added qualified name to const_iterator
+          { 
+               READ_LOCK(*iter_mutex); 
+               { READ_LOCK(*(x.iter_mutex)); 
+               return node != x.node; }
+          } 
+          reference operator* () const
+          {
+               READ_LOCK(*iter_mutex);
+               return (*node).data;
+          }
+          pointer operator-> () const
+          {
+               READ_LOCK(*iter_mutex);
+               return &(operator* ());
+          }
+          iterator& operator++ ()
+          {
+               WRITE_LOCK(*iter_mutex);
+               node = (link_type) ((*node).next);
+               return *this;
+          }
+          iterator operator++ (int)
+          {
+               iterator tmp = *this;
+               ++*this;
+               return tmp;
+          }
+          iterator& operator-- ()
+          {
+               WRITE_LOCK(*iter_mutex);
+               node = (link_type) ((*node).prev);
+               return *this;
+          }
+          iterator operator-- (int)
+          {
+               iterator tmp = *this;
+               --*this;
+               return tmp;
+          }
+     };
+     class const_iterator
+          : public MSIPLSTD::iterator<bidirectional_iterator_tag, T, 
+                                      difference_type, const_pointer, const_reference>   // hh 980105 changed pointer & reference to const versions
+     {
+          friend class list<T, Allocator>;
+          friend class list<T, Allocator>::iterator;  // hh 971222 Added qualified name
+
+     protected:
+          link_type node;
+          DEC_OBJ_LOCK(*iter_mutex)
+
+		#ifdef MSIPL_OBJECT_LOCK
+			const_iterator (link_type x, const list<T, Allocator>* ptr)   // hh 980106 rewrote to silence unused arg warning
+				: node (x),
+				iter_mutex (&((list<T, Allocator>*)ptr)->_mutex)
+			{
+			}
+		#else
+			const_iterator (link_type x, const list<T, Allocator>*)
+				: node (x)
+			{
+			}
+		#endif
+
+     public:
+          const_iterator (): node (0) {}
+
+          const_iterator (const list<T, Allocator>::iterator& x) : node (x.node)  // hh 971222 Added qualified name
+     #ifdef MSIPL_OBJECT_LOCK
+                , iter_mutex (x.iter_mutex)
+     #endif
+          {}
+
+          ~const_iterator () {}
+
+          bool operator== (const const_iterator& x) const
+          { 
+               READ_LOCK(*iter_mutex); 
+               { READ_LOCK(*(x.iter_mutex)); 
+               return node == x.node; }
+          }
+          bool operator!= (const const_iterator& x) const
+          { 
+               READ_LOCK(*iter_mutex); 
+               { READ_LOCK(*(x.iter_mutex)); 
+               return node != x.node; }
+          }
+          const_reference operator*() const
+          {
+               READ_LOCK(*iter_mutex);
+               return (*node).data;
+          }
+          const_pointer operator-> () const
+          {
+               READ_LOCK(*iter_mutex);
+               return &(operator* ());
+          }
+          const_iterator& operator++ ()
+          {
+               WRITE_LOCK(*iter_mutex);
+               node = (link_type) ((*node).next);
+               return *this;
+          }
+          const_iterator operator++ (int)
+          {
+               const_iterator tmp = *this;
+               ++*this;
+               return tmp;
+          }
+          const_iterator& operator-- ()
+          {
+               WRITE_LOCK(*iter_mutex);
+               node = (link_type) ((*node).prev);
+               return *this;
+          }
+          const_iterator operator-- (int)
+          {
+               const_iterator tmp = *this;
+               --*this;
+               return tmp;
+          }
+     };
+
+    //  23.2.2.1  construct/copy/destroy:
+    //
+     explicit list (const Allocator& alloc = Allocator ())
+          : value_allocator (alloc), length (0)
+#ifdef MSIPL_MEMBER_TEMPLATE
+          , list_node_allocator (alloc)
+#endif
+          , cache ((link_type)0)
+     { 
+          head = get_node (); 
+     }      
+
+     explicit list (size_type n, const T& value = T (), 
+                    const Allocator& alloc = Allocator ())
+          : value_allocator (alloc)
+#ifdef MSIPL_MEMBER_TEMPLATE
+          , list_node_allocator (alloc)
+#endif
+          , length (0), cache ((link_type)0)
+     { 
+          head = get_node (); 
+          MSIPL_TRY
+          {
+               insert (begin (), n, value); 
+          }
+          MSIPL_CATCH
+          {
+               clean_up ();     
+               list_node_allocator.deallocate (head, 1);
+               throw;
+          }
+               
+     }
+
+#ifdef MSIPL_MEMBER_TEMPLATE
+     template <class InputIterator>
+     list (InputIterator first, InputIterator last, 
+           const Allocator& alloc = Allocator ())
+          : value_allocator (alloc), list_node_allocator (alloc)
+          , length (0), cache (0)
+     {
+          head = get_node ();
+          MSIPL_TRY
+          {
+               insert (begin (), first, last);
+          }
+          MSIPL_CATCH
+          {
+               clean_up ();
+               list_node_allocator.deallocate (head, 1);
+               throw;
+          }
+     }
+#else
+     list (const T* first, const T* last, 
+           const Allocator& alloc = Allocator ())
+          : value_allocator (alloc), cache (0), length (0)
+     {
+          head = get_node ();
+          MSIPL_TRY
+          {
+               insert (begin (), first, last);
+          }
+          MSIPL_CATCH
+          {
+               clean_up ();
+               list_node_allocator.deallocate (head, 1);
+               throw;
+          }
+     }
+     list (const_iterator first, const_iterator last, 
+           const Allocator& alloc = Allocator ())
+          : value_allocator (alloc) , cache (0), length (0)
+     {
+        head = get_node ();
+        MSIPL_TRY
+        {
+            insert (begin (), first, last);
+        }
+        MSIPL_CATCH
+        {
+            clean_up ();
+            list_node_allocator.deallocate (head, 1);
+            throw;
+        }
+     }
+#endif 
+
+     ~list ()
+     {
+          clean_up ();
+          list_node_allocator.deallocate (head, 1); 
+          while (cache) {
+               link_type i = (link_type)cache->next;
+               list_node_allocator.deallocate (cache, 1); 
+               cache = i;
+          }
+     }
+
+     list (const list<T, Allocator>& x)
+          : value_allocator (x.value_allocator)
+#ifdef MSIPL_MEMBER_TEMPLATE
+          , list_node_allocator (x.list_node_allocator)
+#endif
+          , cache (0), length (0)
+     {
+          head = get_node ();
+          MSIPL_TRY 
+          {
+               insert (begin (), x.begin (), x.end ());
+          }
+          MSIPL_CATCH
+          {
+               clean_up ();          
+               list_node_allocator.deallocate (head, 1);
+               throw;
+          }
+     }
+
+     list<T, Allocator>& operator= (const list<T, Allocator>& x)
+     {
+          WRITE_LOCK(_mutex);
+          READ_LOCK(x._mutex);
+          if (this == &x) return *this;
+          iterator first1 = begin ();
+          iterator last1 = end ();
+          const_iterator first2 = x.begin ();
+          const_iterator last2 = x.end ();
+          for (; first1 != last1 && first2 != last2; ++first1, ++first2) 
+               *first1 = *first2;
+          if (first2 == last2)
+               erase (first1, last1);
+          else
+               insert (last1, first2, last2);
+          return *this;
+     }
+
+#ifdef MSIPL_MEMBER_TEMPLATE
+     template<class InputIterator>
+     void assign (InputIterator first2, InputIterator last2)
+     {
+          WRITE_LOCK(_mutex);
+          erase (begin (), end ());
+          insert (begin (), first2, last2);
+     }
+#else
+     void assign (const T* first, const T* last)
+     {
+          WRITE_LOCK(_mutex);
+          erase (begin (), end ());
+          insert (begin (), first, last);
+     }
+     void assign (const_iterator first, const_iterator last)
+     {
+          WRITE_LOCK(_mutex);
+          erase (begin (), end ());
+          insert (begin (), first, last);
+     }
+#endif
+
+     void assign (size_type n, const T& t)
+     {
+          WRITE_LOCK(_mutex);
+          erase (begin (), end ());
+          insert (begin (), n, t);
+     }
+
+    allocator_type get_allocator () const 
+     { 
+          return value_allocator; 
+     }
+
+// 
+//  Iterators:
+//
+
+    iterator             begin ()
+    {
+        READ_LOCK(_mutex);
+        return iterator ((link_type) (*head).next, this);
+    }
+    const_iterator       begin () const
+    {
+        READ_LOCK(_mutex);
+        return iterator ((link_type) (*head).next, this);
+    }
+    iterator             end   ()
+    {
+        READ_LOCK(_mutex);
+        return iterator (head, this);
+    }
+    const_iterator       end   () const
+    {
+        READ_LOCK(_mutex);
+        return iterator (head, this);
+    }
+ 
+    reverse_iterator       rbegin ()
+    { return reverse_iterator (end ()); }
+ 
+    const_reverse_iterator rbegin () const
+    { return const_reverse_iterator (end ()); }
+ 
+    reverse_iterator       rend ()
+    { return reverse_iterator (begin ()); }
+
+    const_reverse_iterator rend () const
+    { return const_reverse_iterator (begin ()); }
+
+//
+// 23.2.2.2
+//
+
+    bool      empty ()    const
+    {
+        READ_LOCK(_mutex);
+        return (length == 0);
+    }
+  
+    size_type size () const { READ_LOCK(_mutex); return length; }
+    size_type max_size () const { return list_node_allocator.max_size (); }
+
+     void resize (size_type new_size, T c = T ())
+     {
+          WRITE_LOCK(_mutex);
+          const size_type len = size ();
+          if (new_size < len) {
+               iterator iter;
+               if (new_size < len / 2) {
+                    iter = begin ();
+                    advance (iter,  (difference_type)new_size);
+               }
+               else {
+                    iter = end ();
+                    advance (iter,  (difference_type) (new_size - len));
+               }
+                erase (iter, end ());
+          }
+          else if (new_size > len)
+               insert (end (), new_size - len, c);
+     }
+
+    //
+    //   element access:
+    //
+    reference         front ()       { return *begin ();   }
+    const_reference   front () const { return *begin ();   }
+    reference         back ()        { return *(--end ()); }
+    const_reference   back () const  { return *(--end ()); }
+
+    //
+    //   23.2.2.3  modifiers
+ 
+     iterator insert (iterator position, const T& x)
+     {
+          WRITE_LOCK(_mutex);
+          link_type tmp = get_node ();
+          MSIPL_TRY
+          {
+               value_allocator.construct (&((*tmp).data), x);
+          }
+          MSIPL_CATCH
+          {
+               list_node_allocator.deallocate (tmp, 1);
+               throw;
+          }
+          tmp->prev = (*position.node).prev;
+          tmp->next = position.node;
+          (*(link_type ((*position.node).prev))).next = tmp;
+          (*position.node).prev = tmp;
+          ++length;
+          return iterator (tmp, this);
+     }
+     
+     void insert (iterator position, size_type n, const T& x)
+     {
+          for ( ; n > 0; --n)
+               insert (position, x);
+     }
+
+#ifdef MSIPL_MEMBER_TEMPLATE
+     template <class InputIterator>
+     void insert (iterator position, InputIterator first, InputIterator last)
+     {
+          for (; first != last; ++first) 
+               insert (position, *first);
+     }
+ 
+#else
+     void insert (iterator position, const T* first, const T* last)
+     {
+          for (; first != last; ++first) 
+               insert (position, *first);
+     }
+     void insert (iterator position, const_iterator first, const_iterator last)
+     {
+          for (; first != last; ++first) 
+               insert (position, *first);
+     }
+#endif
+
+     void push_front (const T& x) { insert (begin (), x); }
+     void push_back (const T& x)  { insert (end (), x);   }
+     void pop_front ()            { erase (begin ()); }
+     void pop_back ()
+     {
+          WRITE_LOCK(_mutex);
+          iterator tmp = end ();
+          erase (--tmp);
+     }
+
+     iterator erase (iterator position)
+     {
+          WRITE_LOCK(_mutex);
+          (*(link_type ((*position.node).prev))).next = (*position.node).next;
+          (*(link_type ((*position.node).next))).prev = (*position.node).prev;
+          iterator ret = iterator ((link_type) (*position.node).next, this);
+          value_allocator.destroy (&((*position.node).data));
+          (*position.node).next = cache;
+          cache = (link_type)position.node;
+          --length;
+          return ret;
+     }
+
+     iterator erase (iterator first, iterator last)
+     {
+          while (first != last) 
+               erase (first++);
+          return last;
+     }
+
+     void swap (list<T, Allocator>& x)
+     {
+          WRITE_LOCK(_mutex);
+          { WRITE_LOCK(x._mutex);
+          MSIPLSTD::swap (length, x.length);
+          MSIPLSTD::swap (value_allocator, x.value_allocator);
+          MSIPLSTD::swap (list_node_allocator, x.list_node_allocator);
+          MSIPLSTD::swap (cache, x.cache);
+          MSIPLSTD::swap (head, x.head); }
+     }
+ 
+     void clear () 
+     {  
+          erase (begin (), end ()); 
+     }
+
+//
+// 23.2.2.4 list operations
+//
+
+     void splice (iterator position, list<T, Allocator>& x)
+     {
+          WRITE_LOCK(_mutex);
+          if (!x.empty () && &x != this) {
+               transfer (position, x.begin (), x.end ());
+               length += x.length;
+               x.length = 0;
+          }
+     }
+
+     void splice (iterator position, list<T, Allocator>& x, iterator i)
+     {
+          WRITE_LOCK(_mutex);
+          iterator j = i;
+          transfer (position, i, ++j);       
+          ++length;
+          --x.length;
+     }
+     void splice (iterator position, 
+                    list<T, Allocator>& x, iterator first, iterator last)
+     {
+          if (first != last) {
+               WRITE_LOCK(_mutex);
+               if (&x != this) {
+                    difference_type n = distance (first, last);
+                    x.length -= n;
+                    length += n;
+               }
+               transfer (position, first, last);
+          }
+     }
+
+	#ifdef MSIPL_MEMBER_TEMPLATE  // hh 980713 Temporarily moved into class definition to support compiler
+
+	template <class Predicate>
+	void
+	remove_if (Predicate pred)
+	{
+	     WRITE_LOCK(_mutex);
+	     iterator first = begin ();
+	     iterator last = end ();
+	     while (first != last)
+	          if (pred (*first)) 
+	               erase (first++);
+	          else 
+	               first++;
+	}
+	 
+	template <class BinaryPredicate>
+	void
+	unique (BinaryPredicate binary_pred)
+	{
+	     iterator first = begin ();
+	     iterator last = end ();
+	     if (first == last) return;
+	     WRITE_LOCK(_mutex);
+	     iterator next = first;
+	     while (++next != last)
+	          if (binary_pred (*first, *next)) { 
+	               erase (next); next =first;
+	          }
+	          else
+	               first = next;
+	}
+	 
+	template <class Compare>
+	void
+	merge (list<T, Allocator>& x, Compare comp)
+	{
+	     if (&x == this) return;
+	     WRITE_LOCK(_mutex);
+	     iterator first1 = begin ();
+	     iterator last1 = end ();
+	     iterator first2 = x.begin ();
+	     iterator last2 = x.end ();
+	     iterator next (first2);
+	     while (first1 != last1 && first2 != last2)
+	          if (comp (*first2, *first1)) {
+	               next = first2;
+	               transfer (first1, first2, ++next);
+	               first2 = next;
+	          } 
+	          else
+	               ++first1;
+	     if (first2 != last2) 
+	          transfer (last1, first2, last2);
+	     length += x.length;
+	     x.length= 0;
+	}
+	 
+	template <class Compare>
+	void
+	sort (Compare comp)
+	{
+	     if (size () < 2) return;
+	     WRITE_LOCK(_mutex);
+	     list<T, Allocator> carry;
+	     list<T, Allocator> counter[64];
+	     int fill = 0;
+	     while (!empty ()) {
+	          carry.splice (carry.begin (), *this, begin ());
+	          int i = 0;
+	          while (i < fill && !counter[i].empty ()) {
+	               counter[i].merge (carry, comp);
+	               carry.swap (counter[i++]);
+	          }
+	          carry.swap (counter[i]);
+	          if (i == fill) 
+	               ++fill;
+	     }
+	     while (fill--) 
+	          merge (counter[fill]);
+	}
+	 
+	#endif //
+ 
+
+    void remove (const T& value);
+    void unique ();
+    void merge  (list<T, Allocator>& x);
+    void reverse ();
+    void sort   ();
+
+protected:
+     void transfer (iterator position, iterator first, iterator last)
+     {
+          if (position == first || position == last) return;
+          WRITE_LOCK(_mutex);
+          (*(link_type ((*last.node).prev))).next = position.node;
+          (*(link_type ((*first.node).prev))).next = last.node;
+          (*(link_type ((*position.node).prev))).next = first.node;
+          link_type tmp = link_type ((*position.node).prev);
+          (*position.node).prev = (*last.node).prev;
+          (*last.node).prev = (*first.node).prev;
+          (*first.node).prev = tmp;
+     }
+     // This is only used as a cleanup function in catch clauses. 
+     //
+     void clean_up ()
+     {
+          link_type cur = (link_type) head->next;
+          while (cur != head) {
+               link_type tmp = cur;
+               cur = (link_type) cur->next;
+               value_allocator.destroy (&((*tmp).data));
+               list_node_allocator.deallocate (tmp, 1);
+          }
+          head->next = head;
+          head->prev = head;
+     }
+
+};
+
+template <class T, class Allocator>
+inline bool
+operator== (const list<T, Allocator>& x, const list<T, Allocator>& y)
+{ return x.size () == y.size () &&
+           equal (x.begin (), x.end (), y.begin ()); }
+ 
+template <class T, class Allocator>
+inline bool
+operator< (const list<T, Allocator>& x, const list<T, Allocator>& y)
+{ return lexicographical_compare (x.begin (), x.end (), 
+                                             y.begin (), y.end ()); }
+ 
+template <class T, class Allocator>
+inline bool
+operator!= (const list<T, Allocator>& x, const list<T, Allocator>& y)
+{ return ! (x == y); }
+ 
+template <class T, class Allocator>
+inline bool
+operator<= (const list<T, Allocator>& x, const list<T, Allocator>& y)
+{ return ! (y < x); }
+ 
+template <class T, class Allocator>
+inline bool
+operator>= (const list<T, Allocator>& x, const list<T, Allocator>& y)
+{ return ! (x < y); }
+ 
+template <class T, class Allocator>
+inline bool
+operator> (const list<T, Allocator>& x, const list<T, Allocator>& y)
+{ return (y < x); }
+
+template <class T, class Allocator>
+inline
+void list<T, Allocator>::remove (const T& value)
+{
+     WRITE_LOCK(_mutex);
+     iterator first = begin ();
+     iterator last = end ();
+     while (first != last)
+          if (*first == value) 
+               erase (first++);
+          else 
+               ++first;
+}
+ 
+template <class T, class Allocator>
+inline
+void list<T, Allocator>::unique ()
+{
+     iterator first = begin ();
+     iterator last = end ();
+     if (first == last) return;
+     iterator next = first;
+     while (++next != last) {
+          if (*first == *next)
+               erase (next);
+          else
+               first = next;
+          next = first;
+     }
+}
+ 
+template <class T, class Allocator>
+inline
+void list<T, Allocator>::merge (list<T, Allocator>& x)
+{
+     if (this == &x || x.empty ()) return;
+     WRITE_LOCK(_mutex);
+     if (empty ()) {
+          transfer (begin (), x.begin (), x.end ());
+          length = x.length;
+          x.length = 0;
+          return;
+     }
+     iterator first1 = begin ();
+     iterator last1 = end ();
+     iterator first2 = x.begin ();
+     iterator last2 = x.end ();
+     iterator next (first2);
+     while (first1 != last1 && first2 != last2)
+          if (*first2 < *first1) {
+               next = first2;
+               transfer (first1, first2, ++next);
+               first2 = next;
+          } 
+          else
+               ++first1;
+     if (first2 != last2) 
+          transfer (last1, first2, last2);
+     length += x.length;
+     x.length= 0;
+}
+ 
+template <class T, class Allocator>
+inline
+void list<T, Allocator>::reverse ()
+{
+     if (size () < 2) return;
+     WRITE_LOCK(_mutex);
+     link_type cur = head;
+     link_type tmp; 
+     do
+     {
+          tmp = (link_type)cur->next;
+          cur->next = cur->prev;
+          cur->prev = tmp;
+          cur = (link_type)cur->prev;
+     }
+     while (cur != head);
+}   
+ 
+template <class T, class Allocator> 
+inline
+void list<T, Allocator>::sort ()
+{
+     if (size () < 2) return;
+     WRITE_LOCK(_mutex);
+     list<T, Allocator> carry;
+     list<T, Allocator> counter[64];
+     int fill = 0;
+     while (!empty ()) {
+          carry.splice (carry.begin (), *this, begin ());
+          int i = 0;
+          while (i < fill && !counter[i].empty ()) {
+               counter[i].merge (carry);
+               carry.swap (counter[i++]);
+          }
+          carry.swap (counter[i]);
+          if (i == fill) 
+               ++fill;
+     }
+     while (fill--) 
+          merge (counter[fill]);
+}
+ 
+#ifdef MSIPL_USING_NAMESPACE
+	} // namespace std
+#endif
+
+#if defined(__CFM68K__) && !defined(__USING_STATIC_LIBS__)
+	#pragma import reset
+#endif
+#pragma options align=reset
+
+#endif // RC_INVOKED
+
+#endif
+
+// hh 971220 fixed MOD_INCLUDE
+// hh 971222 added alignment wrapper
+// hh 971222 Changed filename from list.h to list
+// hh 971222 Made include guards standard
+// hh 971222 Added qualified name to const_iterator and iterator in several places
+// hh 971230 added RC_INVOKED wrapper
+// hh 980105 changed pointer & reference to const versions in const_iterator base class
+// hh 980106 rewrote iterator and const_iterator constructors to silence unused arg warning
+// hh 980111 <stdexcept> commented out.  Not needed.
+// hh 980713 Temporarily moved member templates into class definition to support compiler
