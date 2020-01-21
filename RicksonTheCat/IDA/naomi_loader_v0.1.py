@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 """IDA Pro NAOMI/NAOMI2 game loader
 
-WARNING:: This IS a work in progress, I have a more complex loader but I'm still documenting it
+naomi_loader_v0.1.py - Loading the code into smaller segments and running strings on it to be able to view and check some code.
+
+WARNING:: This IS a work in progress, also there will be dangling pointers due to the segments not being the SH4 defined ones, but code WILL load.
+
+This comes without WARRANTY and is for educational and security research purposes, use at your own risk!
 """
 import binascii
 import struct
@@ -18,12 +22,14 @@ _NAOMI_SIGNATURE     = "NAOMI"
 _NAOMI_FORMAT_NAME   = "NAOMI (Arcade Game loader with ROM and RAM setup)"
 
 class JasperThe2kCat:
-    """The Games and even the NetDimm software for network boot have the same structure
+    """Header class for the NAOMI game cartridges
+    
+    The Games and even the NetDimm software for network boot have the same structure
     |Platform|Developer|Title Region 1|Title Region 2|...|Title Region 8|
     So we create that as a class and apply it, since is a lazy way of doing it, we name it
     based on a scrub like DSP.
     
-    For more details on the structure read the previous block, for more details on DSP .. nothing I could do! *SNORT*
+    For more details on the structure read the jupyter notebook or blog posts, for more details on DSP .. nothing I could do! *SNORT*
     
     "At least I'm not a 2,000 USD cat" --Rickson <TheCatThatHacks>
     """

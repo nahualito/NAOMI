@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 """IDA Pro NAOMI/NAOMI2 game loader
+
+naomi_full_loader_v0.1.py - Loading the code into smaller segments and running strings on it to be able to view and check some code.
+
+WARNING:: This IS a work in progress, the loads and strings window WILL be slow, mostly because all segments are created and some big ones marked as CODE.
+
+This comes without WARRANTY and is for educational and security research purposes, use at your own risk!
 """
 import binascii
 import struct
