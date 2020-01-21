@@ -2,7 +2,7 @@
 I finally realized I needed to upload and share my SH4 / NAOMI documentation, maybe this way some traction will appear and maybe I'll even find myself more interested in it again.
 
 # Notebooks
-I've been using jupyter notebook to try and explain what I did to figure out how to reverse this header, the [game header](NAOMI%20Game%20Header.ipynb) is still (maybe?) a bit of a mess where I'm slowly explaining what did I do to figure out stuff if anyone is interested enough, the [IDA loader(jupyter/NAOMI%20IDA%20Pro%20Loaders.ipynb)] is pretty much done and has the instructions to create the loader, the notebooks are in python 3, the loaders are python 2, because IDA Pro that's why.
+I've been using jupyter notebook to try and explain what I did to figure out how to reverse this header, the [game header](NAOMI%20Game%20Header.ipynb) is still (maybe?) a bit of a mess where I'm slowly explaining what did I do to figure out stuff if anyone is interested enough, the [IDA loader](jupyter/NAOMI%20IDA%20Pro%20Loaders.ipynb) is pretty much done and has the instructions to create the loader, the notebooks are in python 3, the loaders are python 2, because IDA Pro that's why.
 
 
 ## Updates
